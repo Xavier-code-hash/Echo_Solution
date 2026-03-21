@@ -1,0 +1,76 @@
+{% extends "base/app.html" %}
+{% load humanize %}
+{% block title %}Invoices{% endblock %}
+{% block topbar_title %}Invoices{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1 class="page-title">Invoices</h1><p class="page-sub">All rent invoices and payments</p></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <a href="{% url 'payments:list' %}" class="btn btn-sm {% if not filter_status %}btn-primary{% else %}btn-ghost{% endif %}">All</a>
+    {% for val,label in status_choices %}
+    <a href="?status={{ val }}" class="btn btn-sm {% if filter_status == val %}btn-primary{% else %}btn-ghost{% endif %}">{{ label }}</a>
+    {% endfor %}
+    {% if request.user.is_owner_or_above %}
+    <a href="{% url 'payments:invoice-create' %}" class="btn btn-primary btn-sm" style="margin-left:8px"><i class="fas fa-plus"></i> Create Invoice</a>
+    {% endif %}
+  </div>
+</div>
+
+{% if invoices %}
+<div class="card">
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Invoice #</th>
+          {% if request.user.is_owner_or_above %}<th>Tenant</th>{% endif %}
+          <th>Property</th>
+          <th>Amount</th>
+          <th>Paid</th>
+          <th>Balance</th>
+          <th>Due Date</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for inv in invoices %}
+        <tr>
+          <td style="font-weight:700"><a href="{% url 'payments:invoice-detail' inv.pk %}">{{ inv.invoice_number }}</a></td>
+          {% if request.user.is_owner_or_above %}
+          <td>
+            <a href="{% url 'tenants:detail' inv.lease.tenant.pk %}">{{ inv.lease.tenant.get_full_name }}</a>
+          </td>
+          {% endif %}
+          <td style="color:var(--txt2)">{{ inv.lease.unit.property.name }} #{{ inv.lease.unit.unit_number }}</td>
+          <td>KES {{ inv.total_amount|floatformat:0|intcomma }}</td>
+          <td style="color:var(--green)">KES {{ inv.amount_paid|floatformat:0|intcomma }}</td>
+          <td style="font-weight:600;{% if inv.balance_due > 0 %}color:var(--red){% else %}color:var(--green){% endif %}">
+            KES {{ inv.balance_due|floatformat:0|intcomma }}
+          </td>
+          <td style="{% if inv.status == 'overdue' %}color:var(--red);font-weight:600{% endif %}">{{ inv.due_date|date:"d M Y" }}</td>
+          <td><span class="badge badge-{% if inv.status == 'paid' %}green{% elif inv.status == 'overdue' %}red{% elif inv.status == 'partial' %}amber{% elif inv.status == 'void' %}slate{% else %}blue{% endif %}">{{ inv.get_status_display }}</span></td>
+          <td>
+            <div style="display:flex;gap:4px">
+              <a href="{% url 'payments:invoice-detail' inv.pk %}" class="btn btn-ghost btn-sm"><i class="fas fa-eye"></i></a>
+              {% if inv.status != 'paid' and inv.status != 'void' %}
+              <a href="{% url 'payments:pay' inv.pk %}" class="btn btn-primary btn-sm">Pay</a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card"><div class="empty">
+  <div class="empty-ic"><i class="fas fa-receipt"></i></div>
+  <div class="empty-title">No invoices{% if filter_status %} with status "{{ filter_status }}"{% endif %}</div>
+  {% if request.user.is_owner_or_above %}
+  <a href="{% url 'payments:invoice-create' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Create Invoice</a>
+  {% endif %}
+</div></div>
+{% endif %}
+{% endblock %}

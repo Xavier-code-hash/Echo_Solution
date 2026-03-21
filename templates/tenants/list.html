@@ -1,0 +1,70 @@
+{% extends "base/app.html" %}
+{% load humanize %}
+{% block title %}Tenants{% endblock %}
+{% block topbar_title %}Tenants{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1 class="page-title">Tenants</h1>
+    <p class="page-sub">{{ leases|length }} active tenant{{ leases|length|pluralize }}</p>
+  </div>
+  <div style="display:flex;gap:10px">
+    <a href="{% url 'tenants:leases' %}" class="btn btn-outline btn-sm"><i class="fas fa-file-contract"></i> All Leases</a>
+    <a href="{% url 'tenants:create' %}" class="btn btn-primary btn-sm"><i class="fas fa-user-plus"></i> Add Tenant</a>
+  </div>
+</div>
+
+{% if leases %}
+<div class="card">
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead>
+        <tr><th>Tenant</th><th>Property / Unit</th><th>Monthly Rent</th><th>Lease Ends</th><th>Days Left</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for l in leases %}
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="sb-av" style="width:34px;height:34px;font-size:.7rem;flex-shrink:0;background:linear-gradient(135deg,var(--brass),var(--navy-700))">
+                {{ l.tenant.first_name.0 }}{{ l.tenant.last_name.0 }}
+              </div>
+              <div>
+                <a href="{% url 'tenants:detail' l.tenant.pk %}" style="font-weight:600">{{ l.tenant.get_full_name }}</a>
+                <div style="font-size:.8rem;color:var(--txt3)">{{ l.tenant.email }}</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div style="font-weight:500">{{ l.unit.property.name }}</div>
+            <div style="font-size:.8rem;color:var(--txt3)">Unit #{{ l.unit.unit_number }}</div>
+          </td>
+          <td style="font-weight:600">KES {{ l.monthly_rent|floatformat:0|intcomma }}</td>
+          <td>{{ l.end_date|date:"d M Y" }}</td>
+          <td>
+            <span class="badge {% if l.days_remaining <= 30 %}badge-red{% elif l.days_remaining <= 60 %}badge-amber{% else %}badge-green{% endif %}">
+              {{ l.days_remaining }}d
+            </span>
+          </td>
+          <td>
+            <div style="display:flex;gap:6px">
+              <a href="{% url 'tenants:detail' l.tenant.pk %}" class="btn btn-ghost btn-sm"><i class="fas fa-eye"></i></a>
+              <a href="{% url 'messaging:compose' %}?to={{ l.tenant.pk }}" class="btn btn-ghost btn-sm"><i class="fas fa-envelope"></i></a>
+              <a href="{% url 'payments:invoice-create' %}?lease={{ l.pk }}" class="btn btn-ghost btn-sm"><i class="fas fa-receipt"></i></a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card"><div class="empty">
+  <div class="empty-ic"><i class="fas fa-users"></i></div>
+  <div class="empty-title">No active tenants</div>
+  <div class="empty-sub">Add a tenant and create their lease to get started.</div>
+  <a href="{% url 'tenants:create' %}" class="btn btn-primary"><i class="fas fa-user-plus"></i> Add Tenant</a>
+</div></div>
+{% endif %}
+{% endblock %}

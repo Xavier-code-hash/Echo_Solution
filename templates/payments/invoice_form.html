@@ -1,0 +1,28 @@
+{% extends "base/app.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block topbar_title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1 class="page-title">{{ title }}</h1></div>
+  <a href="{% url 'payments:list' %}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> Back</a>
+</div>
+<div class="card" style="max-width:680px">
+  <div class="card-head"><span class="card-title"><i class="fas fa-file-invoice"></i> Invoice Details</span></div>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% for field in form %}
+        {% if not field.is_hidden %}
+        <div class="form-group">
+          <label class="form-label">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}<p class="form-err"><i class="fas fa-circle-exclamation"></i> {{ field.errors.0 }}</p>{% endif %}
+          {% if field.help_text %}<p class="form-hint">{{ field.help_text }}</p>{% endif %}
+        </div>
+        {% endif %}
+      {% endfor %}
+      <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-save"></i> Create Invoice</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

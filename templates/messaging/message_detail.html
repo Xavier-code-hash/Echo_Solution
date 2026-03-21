@@ -1,0 +1,43 @@
+{% extends "base/app.html" %}
+{% block title %}{{ message.subject }}{% endblock %}
+{% block topbar_title %}Message{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1 class="page-title">{{ message.subject }}</h1></div>
+  <a href="{% url 'messaging:inbox' %}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> Inbox</a>
+</div>
+<div style="max-width:760px;display:flex;flex-direction:column;gap:22px">
+  <div class="card">
+    <div class="card-head">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="sb-av" style="width:38px;height:38px;background:linear-gradient(135deg,var(--brass),var(--navy-700))">
+          {% if message.sender %}{{ message.sender.first_name.0 }}{{ message.sender.last_name.0 }}{% else %}?{% endif %}
+        </div>
+        <div>
+          <div style="font-weight:700">{{ message.sender.get_full_name|default:"System" }}</div>
+          <div style="font-size:.8rem;color:var(--txt3)">{{ message.created_at|date:"d F Y, H:i" }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div style="white-space:pre-wrap;line-height:1.75;color:var(--txt2)">{{ message.body }}</div>
+    </div>
+  </div>
+
+  <!-- Reply -->
+  <div class="card">
+    <div class="card-head"><span class="card-title"><i class="fas fa-reply"></i> Reply</span></div>
+    <div class="card-body">
+      <form method="post" action="{% url 'messaging:compose' %}">
+        {% csrf_token %}
+        <input type="hidden" name="to" value="{{ message.sender.pk }}">
+        <input type="hidden" name="subject" value="Re: {{ message.subject }}">
+        <div class="form-group">
+          <textarea name="body" class="form-control" rows="5" placeholder="Write your reply…"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Send Reply</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

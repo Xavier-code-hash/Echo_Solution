@@ -1,0 +1,38 @@
+{% extends "base/app.html" %}
+{% block title %}Edit Unit{{ unit.unit_number }}{% endblock %}
+{% block topbar_title %}Edit Unit{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1 class="page-title">Edit Unit #{{ unit.unit_number }}</h1><p class="page-sub">{{ property.name }}</p></div>
+  <a href="{% url 'properties:detail' property.pk %}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> Back</a>
+</div>
+<div class="card" style="max-width:600px">
+  <div class="card-head"><span class="card-title"><i class="fas fa-door-open"></i> Unit Details</span></div>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Unit Number</label>{{ form.unit_number }}</div>
+        <div class="form-group"><label class="form-label">Type</label>{{ form.type }}</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Floor</label>{{ form.floor }}</div>
+        <div class="form-group"><label class="form-label">Status</label>{{ form.status }}</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Bedrooms</label>{{ form.bedrooms }}</div>
+        <div class="form-group"><label class="form-label">Bathrooms</label>{{ form.bathrooms }}</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Monthly Rent (KES)</label>{{ form.monthly_rent }}</div>
+        <div class="form-group"><label class="form-label">Deposit (KES)</label>{{ form.deposit }}</div>
+      </div>
+      <div class="form-group"><label class="form-label">Area (sqft)</label>{{ form.area_sqft }}</div>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+        <a href="{% url 'properties:detail' property.pk %}" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

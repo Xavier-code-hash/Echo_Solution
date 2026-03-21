@@ -1,0 +1,107 @@
+{% extends "base/app.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block topbar_title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1 class="page-title">{{ title }}</h1>
+    <p class="page-sub">{% if property %}Editing {{ property.name }}{% else %}Add a new property to your portfolio{% endif %}</p>
+  </div>
+  <a href="{% if property %}{% url 'properties:detail' property.pk %}{% else %}{% url 'properties:list' %}{% endif %}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> Back</a>
+</div>
+
+<div class="card" style="max-width:820px">
+  <div class="card-head"><span class="card-title"><i class="fas fa-building"></i> Property Details</span></div>
+  <div class="card-body">
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div style="background:var(--red-bg);border:1px solid var(--red);border-radius:var(--r8);padding:12px 16px;margin-bottom:18px;color:var(--red);font-size:.875rem">
+          {% for e in form.non_field_errors %}{{ e }}{% endfor %}
+        </div>
+      {% endif %}
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Property Name *</label>
+          {{ form.name }}
+          {% if form.name.errors %}<p class="form-err"><i class="fas fa-circle-exclamation"></i> {{ form.name.errors.0 }}</p>{% endif %}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Type *</label>
+          {{ form.type }}
+          {% if form.type.errors %}<p class="form-err">{{ form.type.errors.0 }}</p>{% endif %}
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          {{ form.status }}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Year Built <span class="opt">(optional)</span></label>
+          {{ form.year_built }}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Street Address *</label>
+        {{ form.address }}
+        {% if form.address.errors %}<p class="form-err">{{ form.address.errors.0 }}</p>{% endif %}
+      </div>
+
+      <div class="form-row3">
+        <div class="form-group">
+          <label class="form-label">City *</label>
+          {{ form.city }}
+          {% if form.city.errors %}<p class="form-err">{{ form.city.errors.0 }}</p>{% endif %}
+        </div>
+        <div class="form-group">
+          <label class="form-label">County <span class="opt">(optional)</span></label>
+          {{ form.county }}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Country</label>
+          {{ form.country }}
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Purchase Price <span class="opt">(KES, optional)</span></label>
+          {{ form.purchase_price }}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cover Image <span class="opt">(optional)</span></label>
+          {{ form.cover_image }}
+          {% if property and property.cover_image %}
+            <div style="margin-top:8px"><img src="{{ property.cover_image.url }}" style="height:60px;border-radius:6px;object-fit:cover"></div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Description <span class="opt">(optional)</span></label>
+        {{ form.description }}
+      </div>
+
+      <div style="display:flex;gap:12px;margin-top:8px">
+        <button type="submit" class="btn btn-primary btn-lg">
+          <i class="fas fa-save"></i> {% if property %}Update Property{% else %}Create Property{% endif %}
+        </button>
+        <a href="{% if property %}{% url 'properties:detail' property.pk %}{% else %}{% url 'properties:list' %}{% endif %}" class="btn btn-ghost btn-lg">Cancel</a>
+        {% if property %}
+        <form method="post" action="{% url 'properties:delete' property.pk %}" style="margin-left:auto">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger btn-lg"
+            onclick="return confirm('Delete {{ property.name }}? This cannot be undone.')">
+            <i class="fas fa-trash"></i> Delete
+          </button>
+        </form>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

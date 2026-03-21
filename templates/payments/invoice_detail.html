@@ -1,0 +1,224 @@
+{% extends "base/app.html" %}
+{% load humanize %}
+{% block title %}{{ invoice.invoice_number }}{% endblock %}
+{% block topbar_title %}Invoice Detail{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <h1 class="page-title">{{ invoice.invoice_number }}</h1>
+    <p class="page-sub">Issued {{ invoice.invoice_date|date:"d F Y" }} &middot; Due {{ invoice.due_date|date:"d F Y" }}</p>
+  </div>
+  <div style="display:flex;gap:10px">
+    {% if invoice.status != 'paid' and invoice.status != 'void' %}
+    <a href="{% url 'payments:pay' invoice.pk %}" class="btn btn-primary"><i class="fas fa-credit-card"></i> Pay Now</a>
+    {% endif %}
+    <span class="badge badge-{% if invoice.status == 'paid' %}green{% elif invoice.status == 'overdue' %}red{% elif invoice.status == 'partial' %}amber{% elif invoice.status == 'void' %}slate{% else %}blue{% endif %}" style="font-size:.875rem;padding:8px 16px">{{ invoice.get_status_display }}</span>
+    <a href="{% url 'payments:list' %}" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i> Back</a>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 300px;gap:22px">
+  <div style="display:flex;flex-direction:column;gap:22px">
+
+    <!-- Invoice breakdown -->
+    <div class="card">
+      <div class="card-head"><span class="card-title"><i class="fas fa-file-invoice"></i> Invoice Breakdown</span></div>
+      <div class="card-body">
+        <table style="width:100%;font-size:.9375rem">
+          <tbody>
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:10px 0;color:var(--txt2)">Rent Amount</td>
+              <td style="padding:10px 0;text-align:right;font-weight:600">KES {{ invoice.rent_amount|floatformat:0|intcomma }}</td>
+            </tr>
+            {% if invoice.late_fee %}
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:10px 0;color:var(--txt2)">Late Fee</td>
+              <td style="padding:10px 0;text-align:right;color:var(--red)">+ KES {{ invoice.late_fee|floatformat:0|intcomma }}</td>
+            </tr>
+            {% endif %}
+            {% if invoice.other_charges %}
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:10px 0;color:var(--txt2)">Other Charges</td>
+              <td style="padding:10px 0;text-align:right">+ KES {{ invoice.other_charges|floatformat:0|intcomma }}</td>
+            </tr>
+            {% endif %}
+            {% if invoice.discount %}
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:10px 0;color:var(--txt2)">Discount</td>
+              <td style="padding:10px 0;text-align:right;color:var(--green)">− KES {{ invoice.discount|floatformat:0|intcomma }}</td>
+            </tr>
+            {% endif %}
+            <tr style="border-bottom:2px solid var(--border)">
+              <td style="padding:14px 0;font-weight:700;font-size:1rem">Total Amount</td>
+              <td style="padding:14px 0;text-align:right;font-family:var(--fd);font-size:1.5rem;font-weight:500;color:var(--txt)">KES {{ invoice.total_amount|floatformat:0|intcomma }}</td>
+            </tr>
+            <tr>
+              <td style="padding:10px 0;color:var(--green)">Amount Paid</td>
+              <td style="padding:10px 0;text-align:right;color:var(--green);font-weight:600">− KES {{ invoice.amount_paid|floatformat:0|intcomma }}</td>
+            </tr>
+            <tr>
+              <td style="padding:10px 0;font-weight:700">Balance Due</td>
+              <td style="padding:10px 0;text-align:right;font-family:var(--fd);font-size:1.375rem;font-weight:500;{% if invoice.balance_due > 0 %}color:var(--red){% else %}color:var(--green){% endif %}">
+                KES {{ invoice.balance_due|floatformat:0|intcomma }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        {% if invoice.notes %}
+        <div style="margin-top:16px;padding:14px;background:var(--slate-50);border-radius:var(--r8);font-size:.9375rem;color:var(--txt2)">
+          <strong>Note:</strong> {{ invoice.notes }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Payment history -->
+    <div class="card">
+      <div class="card-head"><span class="card-title"><i class="fas fa-history"></i> Payment History</span></div>
+      {% if payments %}
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Amount</th>
+              <th>Method</th>
+              <th>Reference</th>
+              <th>Status</th>
+              <th>Receipt</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in payments %}
+            <tr>
+              <td>{{ p.created_at|date:"d M Y H:i" }}</td>
+              <td style="font-weight:600">KES {{ p.amount|floatformat:0|intcomma }}</td>
+              <td>
+                <span class="badge badge-slate">
+                  {% if p.gateway == 'mpesa' %}<i class="fas fa-mobile-screen"></i>
+                  {% elif p.gateway == 'stripe' %}<i class="fab fa-stripe-s"></i>
+                  {% elif p.gateway == 'paypal' %}<i class="fab fa-paypal"></i>
+                  {% else %}<i class="fas fa-money-bill"></i>{% endif %}
+                  {{ p.get_gateway_display }}
+                </span>
+              </td>
+              <td style="font-size:.8rem;color:var(--txt3)">
+                {% if p.mpesa_ref %}{{ p.mpesa_ref }}
+                {% elif p.stripe_pi_id %}{{ p.stripe_pi_id|truncatechars:20 }}
+                {% elif p.paypal_order %}{{ p.paypal_order|truncatechars:20 }}
+                {% elif p.reference %}{{ p.reference }}
+                {% else %}—{% endif %}
+              </td>
+              <td>
+                <span class="badge {% if p.status == 'completed' %}badge-green{% elif p.status == 'failed' %}badge-red{% else %}badge-amber{% endif %}">
+                  {{ p.get_status_display }}
+                </span>
+              </td>
+
+              <!-- Receipt column -->
+              <td>
+                {% if p.status == 'completed' and p.receipt_id %}
+                  <a href="{% url 'payments:receipt-download' p.receipt.pk %}"
+                     class="btn btn-ghost btn-sm"
+                     title="Download receipt {{ p.receipt.receipt_number }}"
+                     style="white-space:nowrap">
+                    <i class="fas fa-file-pdf" style="color:var(--red)"></i>
+                    {{ p.receipt.receipt_number }}
+                  </a>
+                {% elif p.status == 'completed' %}
+                  {# Receipt not yet issued — edge case during async webhook processing #}
+                  <span style="color:var(--txt3);font-size:.8rem">Generating…</span>
+                {% else %}
+                  <span style="color:var(--txt3)">—</span>
+                {% endif %}
+              </td>
+
+              <!-- Action column -->
+              <td>
+                {% if p.gateway == 'mpesa' and p.status == 'failed' %}
+                <form method="post" action="{% url 'payments:mpesa-retry' p.pk %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-outline btn-sm">Retry</button>
+                </form>
+                {% else %}
+                <span style="color:var(--txt3)">—</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty"><div class="empty-sub">No payments recorded yet.</div></div>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- Sidebar -->
+  <div style="display:flex;flex-direction:column;gap:18px">
+    <div class="card">
+      <div class="card-head"><span class="card-title"><i class="fas fa-user"></i> Tenant</span></div>
+      <div class="card-body">
+        <div style="font-weight:600;margin-bottom:4px"><a href="{% url 'tenants:detail' invoice.lease.tenant.pk %}">{{ invoice.lease.tenant.get_full_name }}</a></div>
+        <div style="font-size:.875rem;color:var(--txt3);margin-bottom:14px">{{ invoice.lease.tenant.email }}</div>
+        <div style="font-size:.875rem;color:var(--txt2)"><strong>Unit:</strong> {{ invoice.lease.unit.property.name }} #{{ invoice.lease.unit.unit_number }}</div>
+      </div>
+    </div>
+
+    {% if request.user.is_owner_or_above %}
+    <div class="card">
+      <div class="card-head"><span class="card-title"><i class="fas fa-cog"></i> Actions</span></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+        {% if invoice.status != 'paid' and invoice.status != 'void' %}
+        <a href="{% url 'payments:pay' invoice.pk %}" class="btn btn-primary btn-block"><i class="fas fa-credit-card"></i> Make Payment</a>
+        <form method="post">
+          {% csrf_token %}<input type="hidden" name="action" value="remind">
+          <button type="submit" class="btn btn-outline btn-block"><i class="fas fa-bell"></i> Send Reminder</button>
+        </form>
+        <form method="post">
+          {% csrf_token %}<input type="hidden" name="action" value="void">
+          <button type="submit" class="btn btn-ghost btn-block" style="color:var(--red)" onclick="return confirm('Void this invoice?')">
+            <i class="fas fa-ban"></i> Void Invoice
+          </button>
+        </form>
+        {% else %}
+        <div style="text-align:center;color:var(--txt3);font-size:.875rem">
+          {% if invoice.status == 'paid' %}
+          <i class="fas fa-check-circle" style="color:var(--green)"></i>
+          Fully paid on {{ invoice.paid_date|date:"d M Y" }}
+          {% else %}This invoice is void.{% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Receipts sidebar card -->
+    {% with receipts=invoice.receipts.all %}
+    {% if receipts %}
+    <div class="card">
+      <div class="card-head"><span class="card-title"><i class="fas fa-receipt"></i> Receipts</span></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:8px">
+        {% for r in receipts %}
+        <a href="{% url 'payments:receipt-download' r.pk %}"
+           class="btn btn-outline btn-block btn-sm"
+           style="text-align:left;display:flex;align-items:center;gap:8px">
+          <i class="fas fa-file-pdf" style="color:var(--red)"></i>
+          <span>
+            <strong>{{ r.receipt_number }}</strong><br>
+            <span style="font-size:.75rem;color:var(--txt3)">{{ r.issued_at|date:"d M Y H:i" }} &middot; KES {{ r.amount|floatformat:0|intcomma }}</span>
+          </span>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% endwith %}
+
+  </div>
+</div>
+{% endblock %}

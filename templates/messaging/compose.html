@@ -1,0 +1,48 @@
+{% extends "base/app.html" %}
+{% block title %}Compose Message{% endblock %}
+{% block topbar_title %}Compose Message{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1 class="page-title">Compose Message</h1></div>
+  <a href="{% url 'messaging:inbox' %}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> Inbox</a>
+</div>
+<div class="card" style="max-width:680px">
+  <div class="card-head"><span class="card-title"><i class="fas fa-pen"></i> New Message</span></div>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if to_id %}<input type="hidden" name="to" value="{{ to_id }}">{% endif %}
+
+      {% if not to_id %}
+      <div class="form-group">
+        <label class="form-label">To *</label>
+        <select name="to" class="form-control" required>
+          <option value="">— Select recipient —</option>
+          {% for u in recipients %}
+          <option value="{{ u.pk }}" {% if u.pk|stringformat:"s" == to_id %}selected{% endif %}>{{ u.get_full_name }} ({{ u.email }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% else %}
+      <div style="background:var(--slate-50);border-radius:var(--r8);padding:12px;margin-bottom:18px;font-size:.9375rem">
+        <strong>To:</strong> {{ recipient.get_full_name }} &lt;{{ recipient.email }}&gt;
+      </div>
+      {% endif %}
+
+      <div class="form-group">
+        <label class="form-label">Subject *</label>
+        <input type="text" name="subject" class="form-control" value="{{ prefill_subject|default:'' }}" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Message *</label>
+        <textarea name="body" class="form-control" rows="8" required>{{ prefill_body|default:'' }}</textarea>
+      </div>
+
+      <div style="display:flex;gap:12px">
+        <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-paper-plane"></i> Send</button>
+        <a href="{% url 'messaging:inbox' %}" class="btn btn-ghost btn-lg">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

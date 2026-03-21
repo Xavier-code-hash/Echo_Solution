@@ -1,0 +1,104 @@
+{% extends "base/app.html" %}
+{% load humanize %}
+{% block title %}Receipts{% endblock %}
+{% block topbar_title %}Receipts{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <h1 class="page-title">Receipts</h1>
+    <p class="page-sub">Official payment receipts — download PDF copies anytime</p>
+  </div>
+  <a href="{% url 'payments:list' %}" class="btn btn-ghost btn-sm">
+    <i class="fas fa-arrow-left"></i> Invoices
+  </a>
+</div>
+
+{% if receipts %}
+<div class="card">
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Receipt #</th>
+          {% if request.user.is_owner_or_above %}<th>Tenant</th>{% endif %}
+          <th>Invoice</th>
+          <th>Property / Unit</th>
+          <th>Amount</th>
+          <th>Method</th>
+          <th>Reference</th>
+          <th>Issued</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in receipts %}
+        <tr>
+          <td style="font-weight:700;white-space:nowrap">
+            <i class="fas fa-receipt" style="color:var(--txt3);margin-right:5px"></i>
+            {{ r.receipt_number }}
+          </td>
+
+          {% if request.user.is_owner_or_above %}
+          <td>
+            <a href="{% url 'tenants:detail' r.tenant.pk %}">{{ r.tenant.get_full_name }}</a>
+          </td>
+          {% endif %}
+
+          <td>
+            <a href="{% url 'payments:invoice-detail' r.invoice.pk %}">{{ r.invoice.invoice_number }}</a>
+          </td>
+
+          <td style="color:var(--txt2)">
+            {{ r.invoice.lease.unit.property.name }} #{{ r.invoice.lease.unit.unit_number }}
+          </td>
+
+          <td style="font-weight:600">KES {{ r.amount|floatformat:0|intcomma }}</td>
+
+          <td>
+            <span class="badge badge-slate">
+              {% if r.gateway == 'mpesa' %}<i class="fas fa-mobile-screen"></i>
+              {% elif r.gateway == 'stripe' %}<i class="fab fa-stripe-s"></i>
+              {% elif r.gateway == 'paypal' %}<i class="fab fa-paypal"></i>
+              {% else %}<i class="fas fa-money-bill"></i>{% endif %}
+              {{ r.gateway_display }}
+            </span>
+          </td>
+
+          <td style="font-size:.8rem;color:var(--txt3)">
+            {{ r.gateway_ref|default:"—"|truncatechars:22 }}
+          </td>
+
+          <td style="white-space:nowrap;color:var(--txt2);font-size:.875rem">
+            {{ r.issued_at|date:"d M Y" }}<br>
+            <span style="color:var(--txt3);font-size:.8rem">{{ r.issued_at|date:"H:i" }}</span>
+          </td>
+
+          <td>
+            <a href="{% url 'payments:receipt-download' r.pk %}"
+               class="btn btn-primary btn-sm"
+               style="white-space:nowrap">
+              <i class="fas fa-file-pdf"></i> Download
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% else %}
+<div class="card">
+  <div class="empty">
+    <div class="empty-ic"><i class="fas fa-receipt"></i></div>
+    <div class="empty-title">No receipts yet</div>
+    <div class="empty-sub">Receipts are generated automatically when a payment is confirmed.</div>
+    <a href="{% url 'payments:list' %}" class="btn btn-primary">
+      <i class="fas fa-file-invoice"></i> View Invoices
+    </a>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

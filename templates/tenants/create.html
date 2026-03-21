@@ -1,0 +1,97 @@
+{% extends "base/app.html" %}
+{% block title %}Add Tenant{% endblock %}
+{% block topbar_title %}Add Tenant{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1 class="page-title">Add Tenant &amp; Create Lease</h1><p class="page-sub">Enter tenant details and assign a unit</p></div>
+  <a href="{% url 'tenants:list' %}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> Back</a>
+</div>
+<div class="card" style="max-width:760px">
+  <div class="card-head"><span class="card-title"><i class="fas fa-user-plus"></i> Tenant &amp; Lease Details</span></div>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div style="background:var(--red-bg);border:1px solid var(--red);border-radius:var(--r8);padding:12px;margin-bottom:16px;color:var(--red)">
+          {% for e in form.non_field_errors %}{{ e }}{% endfor %}
+        </div>
+      {% endif %}
+      <div style="background:var(--slate-50);border-radius:var(--r12);padding:20px;margin-bottom:22px">
+        <div style="font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brass);margin-bottom:14px">Tenant Information</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">First Name *</label>
+            {{ form.first_name }}
+            {% if form.first_name.errors %}<p class="form-err">{{ form.first_name.errors.0 }}</p>{% endif %}
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last Name *</label>
+            {{ form.last_name }}
+            {% if form.last_name.errors %}<p class="form-err">{{ form.last_name.errors.0 }}</p>{% endif %}
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Email Address *</label>
+            {{ form.email }}
+            {% if form.email.errors %}<p class="form-err">{{ form.email.errors.0 }}</p>{% endif %}
+            <p class="form-hint">If account exists, they'll be linked to this lease.</p>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone <span class="opt">optional</span></label>
+            {{ form.phone }}
+          </div>
+        </div>
+      </div>
+
+      <div style="background:var(--slate-50);border-radius:var(--r12);padding:20px;margin-bottom:22px">
+        <div style="font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brass);margin-bottom:14px">Lease Details</div>
+        <div class="form-group">
+          <label class="form-label">Unit *</label>
+          {{ form.unit }}
+          {% if form.unit.errors %}<p class="form-err">{{ form.unit.errors.0 }}</p>{% endif %}
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Start Date *</label>
+            {{ form.start_date }}
+            {% if form.start_date.errors %}<p class="form-err">{{ form.start_date.errors.0 }}</p>{% endif %}
+          </div>
+          <div class="form-group">
+            <label class="form-label">End Date *</label>
+            {{ form.end_date }}
+            {% if form.end_date.errors %}<p class="form-err">{{ form.end_date.errors.0 }}</p>{% endif %}
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Monthly Rent (KES) *</label>
+            {{ form.monthly_rent }}
+            {% if form.monthly_rent.errors %}<p class="form-err">{{ form.monthly_rent.errors.0 }}</p>{% endif %}
+          </div>
+          <div class="form-group">
+            <label class="form-label">Deposit (KES)</label>
+            {{ form.deposit }}
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Rent Due Day</label>
+            {{ form.rent_due_day }}
+            <p class="form-hint">Day of month rent is due (1–28)</p>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Late Fee (KES)</label>
+            {{ form.late_fee }}
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px">
+        <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-save"></i> Create Tenant &amp; Lease</button>
+        <a href="{% url 'tenants:list' %}" class="btn btn-ghost btn-lg">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

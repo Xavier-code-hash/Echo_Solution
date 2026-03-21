@@ -1,0 +1,208 @@
+{% extends "base/app.html" %}
+{% load humanize %}
+{% block title %}{{ property.name }}{% endblock %}
+{% block topbar_title %}{{ property.name }}{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <h1 class="page-title">{{ property.name }}</h1>
+    <p class="page-sub"><i class="fas fa-location-dot"></i> {{ property.address }}, {{ property.city }}, {{ property.country }}</p>
+  </div>
+  <div style="display:flex;gap:10px">
+    <a href="{% url 'properties:edit' property.pk %}" class="btn btn-outline btn-sm"><i class="fas fa-pen"></i> Edit</a>
+    <a href="{% url 'properties:list' %}" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i> Back</a>
+  </div>
+</div>
+
+<!-- Property KPIs -->
+<div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+  <div class="kpi">
+    <div class="kpi-ic kpi-ic-brass"><i class="fas fa-door-open"></i></div>
+    <div><div class="kpi-label">Total Units</div><div class="kpi-value">{{ property.total_units }}</div></div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-ic kpi-ic-green"><i class="fas fa-check-circle"></i></div>
+    <div><div class="kpi-label">Occupied</div><div class="kpi-value">{{ property.occupied_units }}</div></div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-ic kpi-ic-blue"><i class="fas fa-percent"></i></div>
+    <div><div class="kpi-label">Occupancy</div><div class="kpi-value">{{ property.occupancy_rate }}%</div></div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-ic kpi-ic-green"><i class="fas fa-coins"></i></div>
+    <div><div class="kpi-label">Monthly Revenue</div><div class="kpi-value" style="font-size:1.4rem">KES {{ property.monthly_revenue|floatformat:0|intcomma }}</div></div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-ic kpi-ic-amber"><i class="fas fa-calendar"></i></div>
+    <div><div class="kpi-label">Type</div><div class="kpi-value" style="font-size:1.1rem">{{ property.get_type_display }}</div></div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-ic kpi-ic-{% if property.status == 'active' %}green{% else %}amber{% endif %}"><i class="fas fa-signal"></i></div>
+    <div><div class="kpi-label">Status</div><div class="kpi-value" style="font-size:1.1rem">{{ property.get_status_display }}</div></div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 320px;gap:22px">
+  <!-- Units section -->
+  <div>
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title"><i class="fas fa-door-open"></i> Units ({{ units|length }})</span>
+        <button class="btn btn-primary btn-sm" onclick="document.getElementById('addUnitModal').style.display='flex'">
+          <i class="fas fa-plus"></i> Add Unit
+        </button>
+      </div>
+      {% if units %}
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead>
+            <tr><th>Unit</th><th>Type</th><th>Floor</th><th>Beds/Baths</th><th>Rent (KES)</th><th>Status</th><th>Tenant</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for u in units %}
+            <tr>
+              <td style="font-weight:700">#{{ u.unit_number }}</td>
+              <td>{{ u.get_type_display }}</td>
+              <td>{{ u.floor }}</td>
+              <td>{{ u.bedrooms }}bd / {{ u.bathrooms }}ba</td>
+              <td>{{ u.monthly_rent|floatformat:0|intcomma }}</td>
+              <td>
+                <span class="badge {% if u.status == 'occupied' %}badge-green{% elif u.status == 'available' %}badge-blue{% elif u.status == 'maintenance' %}badge-amber{% else %}badge-slate{% endif %}">
+                  {{ u.get_status_display }}
+                </span>
+              </td>
+              <td>
+                {% with active_lease=u.leases.filter %}
+                {% for lease in u.leases.all %}
+                  {% if lease.status == 'active' %}
+                    <a href="{% url 'tenants:detail' lease.tenant.pk %}" style="font-size:.875rem">{{ lease.tenant.get_full_name }}</a>
+                  {% endif %}
+                {% endfor %}
+                {% endwith %}
+              </td>
+              <td>
+                <a href="{% url 'properties:unit-edit' property.pk u.pk %}" class="btn btn-ghost btn-sm"><i class="fas fa-pen"></i></a>
+                <form method="post" action="{% url 'properties:unit-delete' property.pk u.pk %}" style="display:inline">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--red)"
+                    onclick="return confirm('Delete unit {{ u.unit_number }}?')"><i class="fas fa-trash"></i></button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty">
+        <div class="empty-ic"><i class="fas fa-door-open"></i></div>
+        <div class="empty-title">No units yet</div>
+        <div class="empty-sub">Add units to this property.</div>
+        <button class="btn btn-primary" onclick="document.getElementById('addUnitModal').style.display='flex'">
+          <i class="fas fa-plus"></i> Add First Unit
+        </button>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Info sidebar -->
+  <div style="display:flex;flex-direction:column;gap:18px">
+    {% if property.cover_image %}
+    <div class="card"><div style="height:180px;overflow:hidden">
+      <img src="{{ property.cover_image.url }}" style="width:100%;height:100%;object-fit:cover">
+    </div></div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-head"><span class="card-title"><i class="fas fa-info-circle"></i> Details</span></div>
+      <div class="card-body" style="font-size:.9375rem">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          {% if property.year_built %}<div style="display:flex;justify-content:space-between"><span style="color:var(--txt3)">Year Built</span><span style="font-weight:600">{{ property.year_built }}</span></div>{% endif %}
+          {% if property.purchase_price %}<div style="display:flex;justify-content:space-between"><span style="color:var(--txt3)">Purchase Price</span><span style="font-weight:600">KES {{ property.purchase_price|floatformat:0|intcomma }}</span></div>{% endif %}
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--txt3)">County</span><span style="font-weight:600">{{ property.county|default:"—" }}</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--txt3)">Country</span><span style="font-weight:600">{{ property.country }}</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--txt3)">Added</span><span style="font-weight:600">{{ property.created_at|date:"d M Y" }}</span></div>
+        </div>
+        {% if property.description %}
+        <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
+        <p style="color:var(--txt2);line-height:1.65">{{ property.description }}</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title"><i class="fas fa-chart-bar"></i> Occupancy</span></div>
+      <div class="card-body">
+        <div class="occ-bar" style="height:12px;margin-bottom:10px">
+          <div class="occ-fill" style="width:{{ property.occupancy_rate }}%"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.875rem">
+          <span style="color:var(--txt3)">{{ property.occupied_units }} occupied</span>
+          <span style="font-weight:700;color:var(--brass)">{{ property.occupancy_rate }}%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Unit Modal -->
+<div id="addUnitModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border-radius:var(--r24);padding:36px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;position:relative">
+    <button onclick="document.getElementById('addUnitModal').style.display='none'" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:1.25rem;color:var(--txt3);cursor:pointer">&times;</button>
+    <h2 style="font-family:var(--fd);font-size:1.5rem;font-weight:400;margin-bottom:22px">Add Unit</h2>
+    <form method="post" action="{% url 'properties:unit-create' property.pk %}" novalidate>
+      {% csrf_token %}
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Unit Number *</label>
+          {{ unit_form.unit_number }}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Type</label>
+          {{ unit_form.type }}
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Floor</label>
+          {{ unit_form.floor }}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          {{ unit_form.status }}
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Bedrooms</label>
+          {{ unit_form.bedrooms }}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bathrooms</label>
+          {{ unit_form.bathrooms }}
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Monthly Rent (KES) *</label>
+          {{ unit_form.monthly_rent }}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Deposit (KES)</label>
+          {{ unit_form.deposit }}
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Area (sqft) <span class="opt">optional</span></label>
+        {{ unit_form.area_sqft }}
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button type="submit" class="btn btn-primary">Add Unit</button>
+        <button type="button" onclick="document.getElementById('addUnitModal').style.display='none'" class="btn btn-ghost">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

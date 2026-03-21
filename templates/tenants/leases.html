@@ -1,0 +1,61 @@
+{% extends "base/app.html" %}
+{% load humanize %}
+{% block title %}Leases{% endblock %}
+{% block topbar_title %}Leases{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1 class="page-title">Leases</h1><p class="page-sub">All lease agreements</p></div>
+  <div style="display:flex;gap:10px">
+    <!-- Filter buttons -->
+    <a href="{% url 'tenants:leases' %}" class="btn btn-sm {% if not filter_status %}btn-primary{% else %}btn-ghost{% endif %}">All</a>
+    <a href="{% url 'tenants:leases' %}?status=active" class="btn btn-sm {% if filter_status == 'active' %}btn-primary{% else %}btn-ghost{% endif %}">Active</a>
+    <a href="{% url 'tenants:leases' %}?status=expired" class="btn btn-sm {% if filter_status == 'expired' %}btn-primary{% else %}btn-ghost{% endif %}">Expired</a>
+    <a href="{% url 'tenants:leases' %}?status=terminated" class="btn btn-sm {% if filter_status == 'terminated' %}btn-primary{% else %}btn-ghost{% endif %}">Terminated</a>
+    <a href="{% url 'tenants:create' %}" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> New Lease</a>
+  </div>
+</div>
+
+<div class="card">
+  {% if leases %}
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead>
+        <tr><th>Tenant</th><th>Property / Unit</th><th>Rent</th><th>Start</th><th>End</th><th>Days Rem.</th><th>Deposit</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for l in leases %}
+        <tr>
+          <td>
+            <a href="{% url 'tenants:detail' l.tenant.pk %}" style="font-weight:600">{{ l.tenant.get_full_name }}</a>
+            <div style="font-size:.8rem;color:var(--txt3)">{{ l.tenant.email }}</div>
+          </td>
+          <td>
+            <div style="font-weight:500">{{ l.unit.property.name }}</div>
+            <div style="font-size:.8rem;color:var(--txt3)">Unit #{{ l.unit.unit_number }}</div>
+          </td>
+          <td style="font-weight:600">KES {{ l.monthly_rent|floatformat:0|intcomma }}</td>
+          <td>{{ l.start_date|date:"d M Y" }}</td>
+          <td>{{ l.end_date|date:"d M Y" }}</td>
+          <td>
+            {% if l.status == 'active' %}
+              <span class="badge {% if l.days_remaining <= 30 %}badge-red{% elif l.days_remaining <= 60 %}badge-amber{% else %}badge-green{% endif %}">{{ l.days_remaining }}d</span>
+            {% else %}—{% endif %}
+          </td>
+          <td>KES {{ l.deposit|floatformat:0|intcomma }}</td>
+          <td><span class="badge {% if l.status == 'active' %}badge-green{% elif l.status == 'terminated' %}badge-red{% elif l.status == 'expired' %}badge-amber{% else %}badge-slate{% endif %}">{{ l.get_status_display }}</span></td>
+          <td><a href="{% url 'tenants:lease-detail' l.pk %}" class="btn btn-ghost btn-sm">View</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">
+    <div class="empty-ic"><i class="fas fa-file-contract"></i></div>
+    <div class="empty-title">No leases found</div>
+    <div class="empty-sub">{% if filter_status %}No {{ filter_status }} leases.{% else %}Create your first lease.{% endif %}</div>
+    <a href="{% url 'tenants:create' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Create Lease</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

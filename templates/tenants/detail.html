@@ -1,0 +1,134 @@
+{% extends "base/app.html" %}
+{% load humanize %}
+{% block title %}{{ tenant.get_full_name }}{% endblock %}
+{% block topbar_title %}Tenant Profile{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div style="display:flex;align-items:center;gap:16px">
+    <div class="sb-av" style="width:56px;height:56px;font-size:1.1rem;flex-shrink:0;background:linear-gradient(135deg,var(--brass),var(--navy-700))">
+      {{ tenant.first_name.0 }}{{ tenant.last_name.0 }}
+    </div>
+    <div>
+      <h1 class="page-title">{{ tenant.get_full_name }}</h1>
+      <p class="page-sub">{{ tenant.email }} {% if tenant.phone %}&middot; {{ tenant.phone }}{% endif %}</p>
+    </div>
+  </div>
+  <div style="display:flex;gap:10px">
+    <a href="{% url 'messaging:compose' %}?to={{ tenant.pk }}" class="btn btn-outline btn-sm"><i class="fas fa-envelope"></i> Message</a>
+    <a href="{% url 'tenants:list' %}" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i> Back</a>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 320px;gap:22px">
+  <div style="display:flex;flex-direction:column;gap:22px">
+
+    <!-- Leases -->
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title"><i class="fas fa-file-contract"></i> Leases</span>
+      </div>
+      {% if leases %}
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead><tr><th>Unit</th><th>Rent</th><th>Start</th><th>End</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody>
+            {% for l in leases %}
+            <tr>
+              <td>
+                <div style="font-weight:600">{{ l.unit.property.name }}</div>
+                <div style="font-size:.8rem;color:var(--txt3)">Unit #{{ l.unit.unit_number }}</div>
+              </td>
+              <td style="font-weight:600">KES {{ l.monthly_rent|floatformat:0|intcomma }}</td>
+              <td>{{ l.start_date|date:"d M Y" }}</td>
+              <td>{{ l.end_date|date:"d M Y" }}</td>
+              <td><span class="badge {% if l.status == 'active' %}badge-green{% elif l.status == 'terminated' %}badge-red{% else %}badge-amber{% endif %}">{{ l.get_status_display }}</span></td>
+              <td><a href="{% url 'tenants:lease-detail' l.pk %}" class="btn btn-ghost btn-sm">View</a></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty"><div class="empty-sub">No leases found</div></div>
+      {% endif %}
+    </div>
+
+    <!-- Invoices -->
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title"><i class="fas fa-receipt"></i> Recent Invoices</span>
+        <a href="{% url 'payments:list' %}" class="btn btn-ghost btn-sm">View all</a>
+      </div>
+      {% if invoices %}
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead><tr><th>Invoice</th><th>Amount</th><th>Due</th><th>Balance</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for inv in invoices %}
+            <tr>
+              <td><a href="{% url 'payments:invoice-detail' inv.pk %}" style="font-weight:600">{{ inv.invoice_number }}</a></td>
+              <td>KES {{ inv.total_amount|floatformat:0|intcomma }}</td>
+              <td>{{ inv.due_date|date:"d M Y" }}</td>
+              <td style="{% if inv.balance_due > 0 %}color:var(--red);font-weight:600{% endif %}">KES {{ inv.balance_due|floatformat:0|intcomma }}</td>
+              <td><span class="badge badge-{% if inv.status == 'paid' %}green{% elif inv.status == 'overdue' %}red{% elif inv.status == 'partial' %}amber{% else %}slate{% endif %}">{{ inv.get_status_display }}</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty"><div class="empty-sub">No invoices yet</div></div>
+      {% endif %}
+    </div>
+
+    <!-- Maintenance -->
+    <div class="card">
+      <div class="card-head"><span class="card-title"><i class="fas fa-wrench"></i> Maintenance Requests</span></div>
+      {% if maintenance %}
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead><tr><th>Issue</th><th>Priority</th><th>Status</th><th>Date</th></tr></thead>
+          <tbody>
+            {% for r in maintenance %}
+            <tr>
+              <td><a href="{% url 'maintenance:detail' r.pk %}">{{ r.title }}</a></td>
+              <td><span class="badge {% if r.priority == 'emergency' %}badge-red{% elif r.priority == 'high' %}badge-amber{% else %}badge-slate{% endif %}">{{ r.get_priority_display }}</span></td>
+              <td><span class="badge {% if r.status == 'resolved' %}badge-green{% elif r.status == 'open' %}badge-red{% else %}badge-amber{% endif %}">{{ r.get_status_display }}</span></td>
+              <td style="color:var(--txt3)">{{ r.created_at|date:"d M Y" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty"><div class="empty-sub">No maintenance requests</div></div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div style="display:flex;flex-direction:column;gap:18px">
+    <div class="card">
+      <div class="card-head"><span class="card-title"><i class="fas fa-user"></i> Contact Info</span></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:12px;font-size:.9375rem">
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--txt3)">Email</span><a href="mailto:{{ tenant.email }}" style="font-weight:600;word-break:break-all">{{ tenant.email }}</a></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--txt3)">Phone</span><span style="font-weight:600">{{ tenant.phone|default:"—" }}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--txt3)">Role</span><span class="badge badge-blue">{{ tenant.get_role_display }}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--txt3)">Joined</span><span style="font-weight:600">{{ tenant.date_joined|date:"d M Y" }}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--txt3)">Verified</span>
+          <span class="badge {% if tenant.email_verified %}badge-green{% else %}badge-amber{% endif %}">{% if tenant.email_verified %}Yes{% else %}No{% endif %}</span>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <a href="{% url 'messaging:compose' %}?to={{ tenant.pk }}" class="btn btn-primary btn-block"><i class="fas fa-envelope"></i> Send Message</a>
+          <a href="{% url 'payments:invoice-create' %}?tenant={{ tenant.pk }}" class="btn btn-outline btn-block"><i class="fas fa-plus"></i> Create Invoice</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

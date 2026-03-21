@@ -1,0 +1,504 @@
+{% extends "base/base.html" %}
+{% load static %}
+{% block title %}Professional Property Management{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+{% endblock %}
+{% block body %}
+
+<!-- Nav -->
+<nav class="nav" id="mainNav">
+  <a href="{% url 'landing:home' %}" class="nav-brand">
+    <div class="nav-brand-icon"><i class="fas fa-building"></i></div>
+    Echo_Solutions
+  </a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#vacancies">Vacancies</a>
+    <a href="#pricing">Pricing</a>
+    <a href="{% url 'landing:about' %}">About</a>
+    <a href="{% url 'landing:contact' %}">Contact</a>
+  </div>
+  <div class="nav-cta">
+    <a href="{% url 'auth:login' %}" class="btn btn-outline-w btn-sm">Sign In</a>
+    <a href="{% url 'auth:register' %}" class="btn btn-primary btn-sm">Get Started Free</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-inner">
+    <div class="hero-text">
+      <div class="hero-tag">
+        <span class="hero-tag-dot"></span>
+        Built for East African Landlords
+      </div>
+      <h1 class="hero-h1">
+        Manage your properties<br>
+        with <em>confidence</em><br>
+        &amp; clarity
+      </h1>
+      <p class="hero-p">
+        Echo_Solutions brings enterprise-grade property management to independent landlords
+        and growing property firms. Collect rent via M-Pesa, Stripe or PayPal,
+        track leases, handle maintenance — all in one elegant platform.
+      </p>
+      <div class="hero-btns">
+        <a href="{% url 'auth:register' %}" class="btn btn-primary btn-xl">
+          <i class="fas fa-rocket"></i> Start Free Today
+        </a>
+        <a href="#features" class="btn btn-outline-w btn-xl">
+          <i class="fas fa-play-circle"></i> See How It Works
+        </a>
+      </div>
+      <div class="hero-stats">
+        <div>
+          <div class="hero-stat-n">500+</div>
+          <div class="hero-stat-l">Landlords trust Echo_Solutions</div>
+        </div>
+        <div>
+          <div class="hero-stat-n">12,000+</div>
+          <div class="hero-stat-l">Units managed</div>
+        </div>
+        <div>
+          <div class="hero-stat-n">KES 2B+</div>
+          <div class="hero-stat-l">Rent collected</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-vis" style="position:relative">
+      <div class="hero-mockup">
+        <div class="mockup">
+          <div class="mockup-bar">
+            <div class="mockup-dot"></div><div class="mockup-dot"></div><div class="mockup-dot"></div>
+          </div>
+          <div class="m-kpis">
+            <div class="m-kpi"><div class="m-kpi-l">Monthly Income</div><div class="m-kpi-v">482K</div></div>
+            <div class="m-kpi"><div class="m-kpi-l">Occupancy</div><div class="m-kpi-v">94%</div></div>
+            <div class="m-kpi"><div class="m-kpi-l">Properties</div><div class="m-kpi-v">12</div></div>
+            <div class="m-kpi"><div class="m-kpi-l">Active Leases</div><div class="m-kpi-v">38</div></div>
+          </div>
+          <div class="m-chart">
+            <div class="m-chart-l">Revenue — Last 6 months</div>
+            <div class="m-bars">
+              <div class="m-bar" style="height:55%"></div>
+              <div class="m-bar" style="height:68%"></div>
+              <div class="m-bar" style="height:72%"></div>
+              <div class="m-bar" style="height:61%"></div>
+              <div class="m-bar" style="height:85%"></div>
+              <div class="m-bar hi" style="height:100%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="m-badge" style="position:absolute;top:-10px;right:-10px">&#10003; All Paid</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Logos trust bar -->
+<div style="background:var(--navy-900);padding:28px 48px;border-top:1px solid rgba(255,255,255,.04)">
+  <div style="max-width:1240px;margin:0 auto;display:flex;align-items:center;justify-content:center;gap:56px;flex-wrap:wrap">
+    <span style="font-size:.8rem;color:rgba(255,255,255,.25);letter-spacing:.08em;text-transform:uppercase">Payments powered by</span>
+    <span style="color:rgba(255,255,255,.4);font-weight:700;font-size:1.125rem">M-PESA</span>
+    <span style="color:rgba(255,255,255,.4);font-weight:700;font-size:1.125rem">STRIPE</span>
+    <span style="color:rgba(255,255,255,.4);font-weight:700;font-size:1.125rem">PAYPAL</span>
+    <span style="color:rgba(255,255,255,.4);font-weight:700;font-size:.875rem">GMAIL API</span>
+    <span style="color:rgba(255,255,255,.4);font-weight:700;font-size:.875rem">GOOGLE OAUTH</span>
+  </div>
+</div>
+
+<!-- Features -->
+<section class="sec" id="features">
+  <div class="sec-c">
+    <div class="sec-eye">Why Echo_Solutions</div>
+    <h2 class="sec-h">Everything a landlord needs,<br>nothing they don't</h2>
+    <p class="sec-sub">Designed specifically for the East African property market — from single units to large portfolios.</p>
+    <div class="feat-grid">
+      <div class="feat-card">
+        <div class="feat-ic"><i class="fas fa-mobile-screen"></i></div>
+        <h3 class="feat-h">M-Pesa STK Push</h3>
+        <p class="feat-p">Tenants pay rent directly from their phones with a single M-Pesa prompt. No cash handling, no bank queues.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-ic"><i class="fab fa-stripe-s"></i></div>
+        <h3 class="feat-h">Card &amp; PayPal Payments</h3>
+        <p class="feat-p">Accept Visa, Mastercard, and PayPal from international tenants or corporate lessees — fully automated.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-ic"><i class="fas fa-file-contract"></i></div>
+        <h3 class="feat-h">Digital Lease Management</h3>
+        <p class="feat-p">Create, track, and renew leases digitally. Automatic reminders 60 days before expiry keep you ahead.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-ic"><i class="fas fa-wrench"></i></div>
+        <h3 class="feat-h">Maintenance Tracking</h3>
+        <p class="feat-p">Tenants log requests with photos. Assign staff, track progress, and resolve issues with full audit trail.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-ic"><i class="fas fa-envelope"></i></div>
+        <h3 class="feat-h">Gmail API Integration</h3>
+        <p class="feat-p">Send receipts, reminders, and notices directly from your Gmail. Professional, deliverable emails every time.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-ic"><i class="fas fa-chart-pie"></i></div>
+        <h3 class="feat-h">Financial Reports</h3>
+        <p class="feat-p">Income statements, occupancy rates, payment histories, and arrears reports — exportable to PDF &amp; Excel.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section class="sec sec-alt">
+  <div class="sec-c" style="text-align:center">
+    <div class="sec-eye">How it works</div>
+    <h2 class="sec-h" style="max-width:600px;margin:0 auto 48px">Up and running in under 10 minutes</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:32px">
+      {% for step in "123" %}
+      <div>
+        <div style="width:56px;height:56px;border-radius:50%;background:var(--brass);color:#fff;font-family:var(--fd);font-size:1.5rem;font-weight:500;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;box-shadow:var(--s-brass)">{{ step }}</div>
+        {% if step == "1" %}
+        <h4 style="font-family:var(--fd);font-size:1.0625rem;margin-bottom:8px">Create Your Account</h4>
+        <p style="font-size:.9375rem;color:var(--txt2)">Sign up free in 30 seconds. Google login available — no password needed.</p>
+        {% elif step == "2" %}
+        <h4 style="font-family:var(--fd);font-size:1.0625rem;margin-bottom:8px">Add Properties &amp; Units</h4>
+        <p style="font-size:.9375rem;color:var(--txt2)">Enter your properties, add units with photos, set rent amounts and deposit.</p>
+        {% else %}
+        <h4 style="font-family:var(--fd);font-size:1.0625rem;margin-bottom:8px">Invite Tenants &amp; Collect</h4>
+        <p style="font-size:.9375rem;color:var(--txt2)">Tenants receive email invites, sign leases, and pay rent via M-Pesa, card, or PayPal.</p>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{% if not request.user.is_authenticated %}
+<!-- AI Concierge -->
+<section class="sec" id="assistant">
+  <div class="sec-c">
+    <div class="sec-eye">AI Concierge</div>
+    <div class="ai-section-grid">
+      <div>
+        <h2 class="sec-h">Meet the Echo_Solutions AI assistant</h2>
+        <p class="sec-sub">Open to everyone. Ask about pricing, vacancies, features, or setup and get instant guidance.</p>
+        <div class="ai-feature-list">
+          <div class="ai-feature-item">
+            <span class="ai-feature-ic"><i class="fas fa-bolt"></i></span>
+            Instant answers, any time of day
+          </div>
+          <div class="ai-feature-item">
+            <span class="ai-feature-ic"><i class="fas fa-map-location-dot"></i></span>
+            Help finding vacancies and nearby listings
+          </div>
+          <div class="ai-feature-item">
+            <span class="ai-feature-ic"><i class="fas fa-shield-halved"></i></span>
+            Secure guidance on rent collection and lease setup
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-lg" type="button" data-ai-open>
+            <i class="fas fa-comments"></i> Open Assistant
+          </button>
+          <a class="btn btn-outline btn-lg" href="{% url 'auth:register' %}">
+            <i class="fas fa-rocket"></i> Start Free
+          </a>
+        </div>
+      </div>
+      <div class="card ai-preview-card">
+        <div class="card-head">
+          <span class="card-title"><i class="fas fa-robot" style="color:var(--brass)"></i> Echo_Solutions AI</span>
+          <div class="chat-status"><span class="chat-dot"></span> Online</div>
+        </div>
+        <div class="chat-thread ai-preview-thread">
+          <div class="chat-msg chat-msg-them">
+            <div class="chat-bubble" data-ai-greeting>Hello! How are you today?</div>
+            <div class="chat-meta">Echo_Solutions AI - just now</div>
+          </div>
+          <div class="chat-msg chat-msg-them">
+            <div class="chat-bubble">Ask me about pricing, vacancies, or getting started.</div>
+            <div class="chat-meta">Echo_Solutions AI - instant replies</div>
+          </div>
+        </div>
+        <div class="card-body" style="border-top:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" type="button" data-ai-open>Open Chat</button>
+          <a class="btn btn-primary btn-sm" href="{% url 'landing:contact' %}">Talk to a human</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<!-- Public vacancies map -->
+<section class="sec sec-alt" id="vacancies">
+  <div class="sec-c">
+    <div class="sec-eye">Explore</div>
+    <h2 class="sec-h">Find empty houses near you</h2>
+    <p class="sec-sub">Allow location to see nearby vacancies. Tap a listing to zoom in and view details.</p>
+    <div class="card map-card">
+      <div class="card-head">
+        <span class="card-title"><i class="fas fa-map-location-dot" style="color:var(--blue)"></i> Nearby Vacancies</span>
+        <div class="map-note" id="publicMapNote">Enable location to see your position.</div>
+      </div>
+      <div class="map-body">
+        <div id="publicMap" class="map-canvas" aria-label="Map showing your location and nearby vacant houses"></div>
+        <aside class="map-panel">
+          <div class="map-panel-title">Empty Houses Around You</div>
+          <div class="map-list">
+            <button class="map-item" type="button" data-lat="-1.2863" data-lng="36.8172" data-name="Sunset Villas">
+              <div class="map-item-name">Sunset Villas - 2BR</div>
+              <div class="map-item-meta">KES 32,000 - 1.2 km</div>
+            </button>
+            <button class="map-item" type="button" data-lat="-1.2836" data-lng="36.8219" data-name="Riverside Court">
+              <div class="map-item-name">Riverside Court - 1BR</div>
+              <div class="map-item-meta">KES 24,000 - 0.8 km</div>
+            </button>
+            <button class="map-item" type="button" data-lat="-1.2899" data-lng="36.8126" data-name="Oak Terrace">
+              <div class="map-item-name">Oak Terrace - Studio</div>
+              <div class="map-item-meta">KES 18,000 - 1.6 km</div>
+            </button>
+          </div>
+          <a class="btn btn-outline btn-sm" href="{% url 'landing:contact' %}">
+            <i class="fas fa-phone"></i> Inquire About Vacancies
+          </a>
+        </aside>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Pricing -->
+<section class="sec" id="pricing">
+  <div class="sec-c" style="text-align:center">
+    <div class="sec-eye">Simple Pricing</div>
+    <h2 class="sec-h" style="max-width:500px;margin:0 auto 12px">No surprises. Cancel anytime.</h2>
+    <p class="sec-sub" style="max-width:440px;margin:0 auto 48px">Start free, scale as you grow. All plans include M-Pesa, Stripe, PayPal and Gmail integration.</p>
+    <div class="price-grid">
+      <div class="price-card">
+        <div class="price-tier">Starter</div>
+        <div class="price-amount">Free</div>
+        <div class="price-period">Forever — up to 5 units</div>
+        <ul class="price-feats">
+          <li><i class="fas fa-check"></i> Up to 5 units</li>
+          <li><i class="fas fa-check"></i> M-Pesa payments</li>
+          <li><i class="fas fa-check"></i> Basic lease management</li>
+          <li><i class="fas fa-check"></i> Email notifications</li>
+          <li><i class="fas fa-check"></i> Maintenance requests</li>
+        </ul>
+        <a href="{% url 'auth:register' %}" class="btn btn-outline btn-block">Get Started</a>
+      </div>
+      <div class="price-card hot">
+        <div class="price-hot-badge">Most Popular</div>
+        <div class="price-tier">Professional</div>
+        <div class="price-amount">KES 2,500</div>
+        <div class="price-period">per month — unlimited units</div>
+        <ul class="price-feats">
+          <li><i class="fas fa-check"></i> Unlimited units</li>
+          <li><i class="fas fa-check"></i> M-Pesa + Stripe + PayPal</li>
+          <li><i class="fas fa-check"></i> Gmail API integration</li>
+          <li><i class="fas fa-check"></i> Full financial reports</li>
+          <li><i class="fas fa-check"></i> Lease document upload</li>
+          <li><i class="fas fa-check"></i> Priority support</li>
+        </ul>
+        <a href="{% url 'auth:register' %}" class="btn btn-primary btn-block">Start Free Trial</a>
+      </div>
+      <div class="price-card">
+        <div class="price-tier">Enterprise</div>
+        <div class="price-amount">Custom</div>
+        <div class="price-period">Volume pricing for large firms</div>
+        <ul class="price-feats">
+          <li><i class="fas fa-check"></i> Everything in Pro</li>
+          <li><i class="fas fa-check"></i> Multi-user teams</li>
+          <li><i class="fas fa-check"></i> Custom branding</li>
+          <li><i class="fas fa-check"></i> API access</li>
+          <li><i class="fas fa-check"></i> Dedicated support</li>
+        </ul>
+        <a href="{% url 'landing:contact' %}" class="btn btn-outline btn-block">Contact Sales</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Testimonials -->
+<section class="sec sec-alt">
+  <div class="sec-c">
+    <div class="sec-eye" style="text-align:center">Testimonials</div>
+    <h2 class="sec-h" style="text-align:center;max-width:500px;margin:0 auto 48px">Trusted by landlords across Kenya</h2>
+    <div class="testi-grid">
+      <div class="testi-card">
+        <div class="testi-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <p class="testi-q">"M-Pesa integration alone saved me hours every month. Tenants love the instant receipt on their phones."</p>
+        <div class="testi-author">
+          <div class="testi-av">JM</div>
+          <div>
+            <div class="testi-name">James Mwangi</div>
+            <div class="testi-role">32 units, Nairobi</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <p class="testi-q">"Maintenance tracking is a game changer. Tenants can attach photos and I can assign my caretaker instantly."</p>
+        <div class="testi-author">
+          <div class="testi-av">AW</div>
+          <div>
+            <div class="testi-name">Amina Wanjiku</div>
+            <div class="testi-role">Property Manager, Mombasa</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <p class="testi-q">"The financial reports at end of month take 2 minutes now. My accountant is happy, I am happy."</p>
+        <div class="testi-author">
+          <div class="testi-av">SK</div>
+          <div>
+            <div class="testi-name">Samuel Kipchoge</div>
+            <div class="testi-role">18 units, Kisumu</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-strip">
+  <div style="position:relative;z-index:1;max-width:680px;margin:0 auto">
+    <h2 style="font-family:var(--fd);font-size:clamp(1.875rem,4vw,3rem);font-weight:400;color:#fff;margin-bottom:16px;letter-spacing:-.02em">
+      Your properties deserve<br><em style="color:var(--brass-light);font-style:italic">professional management</em>
+    </h2>
+    <p style="font-size:1.0625rem;color:rgba(255,255,255,.45);margin-bottom:36px;line-height:1.7">
+      Join 500+ landlords who collect rent on time, resolve maintenance faster,<br>and sleep better at night.
+    </p>
+    <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
+      <a href="{% url 'auth:register' %}" class="btn btn-primary btn-xl"><i class="fas fa-rocket"></i> Start Free Today</a>
+      <a href="{% url 'landing:contact' %}" class="btn btn-outline-w btn-xl"><i class="fas fa-phone"></i> Talk to Us</a>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+  <div class="footer-grid">
+    <div>
+      <a href="{% url 'landing:home' %}" class="nav-brand" style="display:inline-flex">
+        <div class="nav-brand-icon"><i class="fas fa-building"></i></div>
+        Echo_Solutions
+      </a>
+      <p class="footer-tag">Professional property management built for the East African market. Secure, scalable, and beautifully simple.</p>
+    </div>
+    <div>
+      <div class="footer-h">Product</div>
+      <div class="footer-links">
+        <a href="#features">Features</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#">API Docs</a>
+        <a href="#">Changelog</a>
+      </div>
+    </div>
+    <div>
+      <div class="footer-h">Company</div>
+      <div class="footer-links">
+        <a href="{% url 'landing:about' %}">About</a>
+        <a href="{% url 'landing:contact' %}">Contact</a>
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms of Service</a>
+      </div>
+    </div>
+    <div>
+      <div class="footer-h">Support</div>
+      <div class="footer-links">
+        <a href="#">Help Center</a>
+        <a href="#">Status</a>
+        <a href="{% url 'auth:login' %}">Sign In</a>
+        <a href="{% url 'auth:register' %}">Create Account</a>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>&copy; {% now "Y" %} Echo_Solutions. All rights reserved.</span>
+    <span>Powered by Django &middot; M-Pesa &middot; Stripe &middot; PayPal &middot; Gmail API</span>
+  </div>
+</footer>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(() => {
+  const mapEl = document.getElementById("publicMap");
+  if (!mapEl || !window.L) return;
+
+  const noteEl = document.getElementById("publicMapNote");
+  const defaultCenter = [-1.286389, 36.817223];
+  const map = L.map("publicMap", { zoomControl: true }).setView(defaultCenter, 13);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: "&copy; OpenStreetMap contributors"
+  }).addTo(map);
+
+  const houseIcon = L.divIcon({
+    className: "map-pin",
+    html: '<i class="fas fa-house"></i>',
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+    popupAnchor: [0, -14]
+  });
+  const userIcon = L.divIcon({
+    className: "map-pin map-pin-user",
+    html: '<i class="fas fa-location-dot"></i>',
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+    popupAnchor: [0, -14]
+  });
+
+  const mapItems = Array.from(mapEl.parentElement.querySelectorAll(".map-item[data-lat][data-lng]"));
+  const houseMarkers = mapItems.map(item => {
+    const lat = parseFloat(item.dataset.lat);
+    const lng = parseFloat(item.dataset.lng);
+    if (Number.isNaN(lat) || Number.isNaN(lng)) return null;
+    const title = item.dataset.name || "Vacant Unit";
+    const marker = L.marker([lat, lng], { icon: houseIcon }).addTo(map);
+    marker.bindPopup(`<strong>${title}</strong><br>Available now`);
+    item.addEventListener("click", () => {
+      map.setView([lat, lng], 16);
+      marker.openPopup();
+    });
+    return marker;
+  }).filter(Boolean);
+
+  if (houseMarkers.length) {
+    const group = L.featureGroup(houseMarkers);
+    map.fitBounds(group.getBounds().pad(0.25));
+  }
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const { latitude, longitude } = pos.coords;
+        const userMarker = L.marker([latitude, longitude], { icon: userIcon }).addTo(map);
+        userMarker.bindPopup("You are here");
+        const markers = houseMarkers.concat(userMarker);
+        const group = L.featureGroup(markers);
+        map.fitBounds(group.getBounds().pad(0.25));
+        if (noteEl) noteEl.textContent = "Location active. Showing vacancies nearby.";
+      },
+      () => {
+        if (noteEl) noteEl.textContent = "Location unavailable. Showing default area.";
+      },
+      { enableHighAccuracy: true, timeout: 7000 }
+    );
+  } else if (noteEl) {
+    noteEl.textContent = "Geolocation not supported by this browser.";
+  }
+})();
+</script>
+{% endblock %}

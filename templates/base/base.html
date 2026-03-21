@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+  <html lang="en" data-theme="light">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Echo Solutions — Professional Property Management for East Africa">
+    <title>{% block title %}Echo Solutions{% endblock %} | Echo Solutions</title>
+    {% load static %}
+    <link rel="icon" type="image/png" href="{% static 'favicon.png' %}">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    {% block extra_head %}{% endblock %}
+  </head>
+  <body>
+    {% block body %}{% endblock %}
+  
+    <div class="ai-chatbot" data-ai-chat>
+      <div class="ai-chatbot-panel" data-ai-panel id="aiChatPanel" hidden>
+        <div class="ai-chatbot-head">
+          <div class="ai-chatbot-title">
+            <span class="ai-chatbot-avatar"><i class="fas fa-robot"></i></span>
+            <div>
+              <div class="ai-chatbot-name">Echo Solutions AI Concierge</div>
+              <div class="ai-chatbot-sub"><span class="ai-dot"></span> Online now</div>
+            </div>
+          </div>
+          <button class="ai-chatbot-close" type="button" data-ai-close aria-label="Close chat">&times;</button>
+        </div>
+        <div class="ai-chatbot-thread" data-ai-thread aria-live="polite">
+          <div class="ai-msg">
+            <div class="ai-bubble" data-ai-greeting>Hello! How are you today?</div>
+            <div class="ai-meta">Echo Solutions AI &middot; just now</div>
+          </div>
+        </div>
+        <div class="ai-chatbot-quick">
+          <button type="button" class="ai-chip" data-ai-prompt="Show me the pricing plans">Pricing plans</button>
+          <button type="button" class="ai-chip" data-ai-prompt="How do tenants pay rent?">Payment options</button>
+          <button type="button" class="ai-chip" data-ai-prompt="Can I list vacant units?">List vacancies</button>
+        </div>
+        <form class="ai-chatbot-input" data-ai-form autocomplete="off">
+          <div class="ai-input-wrap">
+            <input type="text" data-ai-input placeholder="Ask about pricing, vacancies, or setup..." aria-label="Type your message">
+            <span class="ai-counter" data-ai-counter aria-hidden="true"></span>
+          </div>
+          <button type="submit" class="ai-send" aria-label="Send message"><i class="fas fa-paper-plane"></i></button>
+        </form>
+        <div class="ai-chatbot-foot">
+          Need a human? <a href="{% url 'landing:contact' %}">Contact our team</a>.
+        </div>
+      </div>
+      <button class="ai-chatbot-toggle" type="button" data-ai-toggle aria-expanded="false" aria-controls="aiChatPanel">
+        <span class="ai-chatbot-toggle-ic"><i class="fas fa-robot"></i></span>
+        <span class="ai-chatbot-toggle-text">Chat with Echo Solutions AI</span>
+      </button>
+    </div>
+  
+    {% if messages %}
+      {% for m in messages %}
+        <span data-toast="{% if m.tags == 'error' %}error{% elif m.tags == 'warning' %}warning{% elif m.tags == 'success' %}success{% else %}info{% endif %}"
+              data-toast-msg="{{ m.message }}" hidden></span>
+      {% endfor %}
+    {% endif %}
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <script src="{% static 'js/script.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+  </body>
+  </html>

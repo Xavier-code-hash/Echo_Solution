@@ -1,0 +1,91 @@
+{% extends "base/base.html" %}
+{% load static %}
+{% block title %}Sign In{% endblock %}
+{% block body %}
+<div class="auth-shell">
+  <!-- Left panel -->
+  <div class="auth-panel">
+    <div class="auth-grid"></div>
+    <div class="auth-panel-inner">
+      <a href="{% url 'landing:home' %}" class="auth-panel-logo">
+        <div class="auth-panel-logo-ic"><i class="fas fa-building"></i></div>
+        Echo_Solutions
+      </a>
+      <div class="auth-quote">"The best investment on Earth is earth."</div>
+      <div class="auth-quote-attr">— Louis Glickman</div>
+      <div class="auth-features">
+        <div class="auth-feature"><div class="auth-feature-ic"><i class="fas fa-check"></i></div>Collect rent via M-Pesa, Stripe &amp; PayPal</div>
+        <div class="auth-feature"><div class="auth-feature-ic"><i class="fas fa-check"></i></div>Automated invoices &amp; payment reminders</div>
+        <div class="auth-feature"><div class="auth-feature-ic"><i class="fas fa-check"></i></div>Maintenance request tracking with photos</div>
+        <div class="auth-feature"><div class="auth-feature-ic"><i class="fas fa-check"></i></div>Brevo SMTP — reliable transactional email delivery</div>
+      </div>
+      <div class="auth-panel-stats">
+        <div><div class="auth-stat-n">500+</div><div class="auth-stat-l">Landlords</div></div>
+        <div><div class="auth-stat-n">12K+</div><div class="auth-stat-l">Units</div></div>
+        <div><div class="auth-stat-n">99.9%</div><div class="auth-stat-l">Uptime</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Form pane -->
+  <div class="auth-form-pane">
+    <a href="{% url 'landing:home' %}" class="auth-logo">
+      <div class="auth-logo-ic"><i class="fas fa-building"></i></div>
+      Echo_Solutions
+    </a>
+    <h1 class="auth-title">Welcome back</h1>
+    <p class="auth-sub">Sign in to your property dashboard</p>
+
+    {% if google_client_id %}
+    <a href="{% url 'auth:google-login' %}" class="auth-google">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
+      Continue with Google
+    </a>
+    <div class="auth-divider">or sign in with email</div>
+    {% endif %}
+
+    <form method="post" action="{% url 'auth:login' %}{% if request.GET.next %}?next={{ request.GET.next|urlencode }}{% endif %}" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div style="background:var(--red-bg);border:1px solid var(--red);border-radius:var(--r8);padding:11px 14px;margin-bottom:16px;font-size:.875rem;color:var(--red);display:flex;gap:8px;align-items:center">
+          <i class="fas fa-exclamation-circle"></i>
+          {% for e in form.non_field_errors %}{{ e }}{% endfor %}
+        </div>
+      {% endif %}
+      <div class="form-group">
+        <label class="form-label">Email address</label>
+        {{ form.email }}
+        {% if form.email.errors %}<p class="form-err"><i class="fas fa-circle-exclamation"></i> {{ form.email.errors.0 }}</p>{% endif %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" style="display:flex;justify-content:space-between">
+          Password
+          <a href="{% url 'auth:password-reset' %}" style="font-weight:400;font-size:.8rem;color:var(--brass)">Forgot password?</a>
+        </label>
+        <div style="position:relative">
+          {{ form.password }}
+          <button type="button" data-pw-toggle="{{ form.password.id_for_label }}"
+            style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--txt3);cursor:pointer">
+            <i class="fas fa-eye"></i>
+          </button>
+        </div>
+        {% if form.password.errors %}<p class="form-err"><i class="fas fa-circle-exclamation"></i> {{ form.password.errors.0 }}</p>{% endif %}
+      </div>
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:22px">
+        {{ form.remember }}
+        <label for="{{ form.remember.id_for_label }}" style="font-size:.875rem;color:var(--txt2);cursor:pointer">Keep me signed in for 2 weeks</label>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block btn-lg">Sign In</button>
+    </form>
+
+    <div class="auth-foot">
+      Don't have an account?
+      <a href="{% url 'auth:register' %}" style="font-weight:600;color:var(--brass)">Create one free &rarr;</a>
+    </div>
+    <div class="auth-secure">
+      <i class="fas fa-lock" style="font-size:.7rem"></i>
+      Secured with Argon2 hashing &amp; encrypted connections
+    </div>
+  </div>
+</div>
+{% endblock %}

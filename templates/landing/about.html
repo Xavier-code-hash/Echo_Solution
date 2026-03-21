@@ -1,0 +1,26 @@
+{% extends "base/base.html" %}
+{% block title %}About{% endblock %}
+{% block body %}
+<nav class="nav solid" style="position:relative">
+  <a href="{% url 'landing:home' %}" class="nav-brand"><div class="nav-brand-icon"><i class="fas fa-building"></i></div>Echo_Solutions</a>
+  <div class="nav-links"><a href="{% url 'landing:home' %}#features">Features</a><a href="{% url 'landing:home' %}#pricing">Pricing</a><a href="{% url 'landing:about' %}">About</a><a href="{% url 'landing:contact' %}">Contact</a></div>
+  <div class="nav-cta"><a href="{% url 'auth:login' %}" class="btn btn-outline-w btn-sm">Sign In</a><a href="{% url 'auth:register' %}" class="btn btn-primary btn-sm">Get Started</a></div>
+</nav>
+<div style="background:var(--navy-900);padding:120px 48px 80px;text-align:center">
+  <h1 style="font-family:var(--fd);font-size:clamp(2rem,5vw,3.5rem);font-weight:400;color:#fff;margin-bottom:16px">Built for <em style="color:var(--brass-light);font-style:italic">African landlords</em></h1>
+  <p style="font-size:1.0625rem;color:rgba(255,255,255,.5);max-width:580px;margin:0 auto">Echo_Solutions was created to give independent property owners the same professional tools that large real estate firms use — without the enterprise price tag.</p>
+</div>
+<section class="sec"><div class="sec-c" style="max-width:800px;margin:0 auto">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;margin-bottom:72px">
+    <div><div class="sec-eye">Our Mission</div><h2 class="sec-h" style="font-size:1.75rem">Simplify property management across Africa</h2><p style="color:var(--txt2);line-height:1.75">Every landlord — whether managing 2 units or 2,000 — deserves tools to collect rent reliably, keep tenants happy, and grow confidently. We built Echo_Solutions to make that possible.</p></div>
+    <div style="background:var(--brass-pale);border-radius:var(--r24);padding:40px;text-align:center"><div style="font-family:var(--fd);font-size:3.5rem;font-weight:600;color:var(--brass)">500+</div><div style="color:var(--txt2);margin-top:6px">Property managers trust Echo_Solutions</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:28px;margin-bottom:64px">
+    <div class="feat-card" style="text-align:center"><div class="feat-ic" style="margin:0 auto 16px"><i class="fas fa-shield-halved"></i></div><h3 class="feat-h">Security First</h3><p class="feat-p">Argon2 hashing, encrypted connections, and secure session management — your data is protected at every layer.</p></div>
+    <div class="feat-card" style="text-align:center"><div class="feat-ic" style="margin:0 auto 16px"><i class="fas fa-headset"></i></div><h3 class="feat-h">Local Support</h3><p class="feat-p">East Africa-based team. We understand the local market, M-Pesa integration, and your day-to-day challenges.</p></div>
+    <div class="feat-card" style="text-align:center"><div class="feat-ic" style="margin:0 auto 16px"><i class="fas fa-code-branch"></i></div><h3 class="feat-h">Always Improving</h3><p class="feat-p">We ship updates every sprint, based on real feedback from our community of landlords and property managers.</p></div>
+  </div>
+  <div style="text-align:center"><a href="{% url 'auth:register' %}" class="btn btn-primary btn-xl"><i class="fas fa-rocket"></i> Start Free Today</a></div>
+</div></section>
+<footer class="footer"><div class="footer-bottom" style="max-width:1240px;margin:0 auto;padding:0"><span>&copy; {% now "Y" %} Echo_Solutions</span><a href="{% url 'landing:home' %}" style="color:rgba(255,255,255,.3)">&larr; Back to home</a></div></footer>
+{% endblock %}

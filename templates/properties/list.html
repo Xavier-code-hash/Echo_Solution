@@ -1,0 +1,57 @@
+{% extends "base/app.html" %}
+{% load humanize %}
+{% block title %}Properties{% endblock %}
+{% block topbar_title %}My Properties{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1 class="page-title">Properties</h1>
+    <p class="page-sub">{{ properties|length }} propert{{ properties|length|pluralize:"y,ies" }} in your portfolio</p>
+  </div>
+  <a href="{% url 'properties:create' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Add Property</a>
+</div>
+
+{% if properties %}
+<div class="prop-grid">
+  {% for p in properties %}
+  <div class="prop-card">
+    <div class="prop-img">
+      {% if p.cover_image %}<img src="{{ p.cover_image.url }}" alt="{{ p.name }}">
+      {% else %}<div class="prop-img-ph"><i class="fas fa-building"></i></div>{% endif %}
+      <div class="prop-card-status" style="position:absolute;top:12px;right:12px">
+        <span class="badge {% if p.status == 'active' %}badge-green{% elif p.status == 'maintenance' %}badge-amber{% else %}badge-slate{% endif %}">
+          {{ p.get_status_display }}
+        </span>
+      </div>
+    </div>
+    <div class="prop-body">
+      <div class="prop-name">{{ p.name }}</div>
+      <div class="prop-addr"><i class="fas fa-location-dot"></i> {{ p.address }}, {{ p.city }}</div>
+      <div class="prop-stats">
+        <div class="prop-stat"><div class="prop-stat-n">{{ p.total_units }}</div><div class="prop-stat-l">Units</div></div>
+        <div class="prop-stat"><div class="prop-stat-n">{{ p.occupied_units }}</div><div class="prop-stat-l">Occupied</div></div>
+        <div class="prop-stat"><div class="prop-stat-n">{{ p.occupancy_rate }}%</div><div class="prop-stat-l">Occupancy</div></div>
+      </div>
+      <div class="occ-bar" style="margin-bottom:14px">
+        <div class="occ-fill" style="width:{{ p.occupancy_rate }}%"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:.875rem;color:var(--txt2)">
+          <i class="fas fa-coins" style="color:var(--brass)"></i>
+          KES {{ p.monthly_revenue|floatformat:0|intcomma }}/mo
+        </div>
+        <a href="{% url 'properties:detail' p.pk %}" class="btn btn-outline btn-sm">View →</a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card"><div class="empty">
+  <div class="empty-ic"><i class="fas fa-building"></i></div>
+  <div class="empty-title">No properties yet</div>
+  <div class="empty-sub">Add your first property to start managing your portfolio.</div>
+  <a href="{% url 'properties:create' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Add Property</a>
+</div></div>
+{% endif %}
+{% endblock %}

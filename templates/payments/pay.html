@@ -1,0 +1,743 @@
+{% extends "base/app.html" %}
+{% load humanize %}
+{% block title %}Pay — {{ invoice.invoice_number }}{% endblock %}
+{% block topbar_title %}Make Payment{% endblock %}
+
+{% block extra_head %}
+{% if stripe_pk %}
+<script src="https://js.stripe.com/v3/"></script>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1 class="page-title">Pay {{ invoice.invoice_number }}</h1>
+    <p class="page-sub">{{ invoice.lease.unit.property.name }} &middot; Unit #{{ invoice.lease.unit.unit_number }}</p>
+  </div>
+  <a href="{% url 'payments:invoice-detail' invoice.pk %}" class="btn btn-ghost">
+    <i class="fas fa-arrow-left"></i> Back
+  </a>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 300px;gap:22px;max-width:900px">
+
+  <!-- ── Left: payment method forms ── -->
+  <div>
+
+    <!-- Method selector -->
+    <div class="card" style="margin-bottom:22px">
+      <div class="card-head"><span class="card-title">Select Payment Method</span></div>
+      <div class="card-body">
+        <div class="pay-methods">
+
+          {% if mpesa_configured %}
+          <div class="pay-method" data-gateway="mpesa">
+            <div class="pay-method-ic">📱</div>
+            <div class="pay-method-label">M-Pesa</div>
+            <div class="pay-method-sub">STK Push</div>
+          </div>
+          {% endif %}
+
+          {% if stripe_pk %}
+          <div class="pay-method" data-gateway="stripe">
+            <div class="pay-method-ic">💳</div>
+            <div class="pay-method-label">Card</div>
+            <div class="pay-method-sub">Visa / Mastercard</div>
+          </div>
+          {% endif %}
+
+          {% if paypal_client_id %}
+          <div class="pay-method" data-gateway="paypal">
+            <div class="pay-method-ic">🅿️</div>
+            <div class="pay-method-label">PayPal</div>
+            <div class="pay-method-sub">Online wallet</div>
+          </div>
+          {% endif %}
+
+          <!-- Cash splits into two sub-options -->
+          <div class="pay-method" data-gateway="cash">
+            <div class="pay-method-ic">💵</div>
+            <div class="pay-method-label">Cash</div>
+            <div class="pay-method-sub">Physical payment</div>
+          </div>
+
+          <div class="pay-method" data-gateway="bank">
+            <div class="pay-method-ic">🏦</div>
+            <div class="pay-method-label">Bank Transfer</div>
+            <div class="pay-method-sub">EFT / RTGS</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ── M-Pesa ── -->
+    <div id="pay-mpesa" class="pay-section" hidden>
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title"><i class="fas fa-mobile-screen"></i> M-Pesa STK Push</span>
+        </div>
+        <div class="card-body">
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="gateway" value="mpesa">
+            <div class="form-group">
+              <label class="form-label">Phone Number *</label>
+              <input type="tel" name="phone" class="form-control" placeholder="254712345678" required>
+              <p class="form-hint">Format: 254XXXXXXXXX (no + sign)</p>
+            </div>
+            <div style="background:var(--amber-bg);border:1px solid var(--amber);border-radius:var(--r8);
+                        padding:12px;margin-bottom:18px;font-size:.875rem;color:#92400e">
+              <i class="fas fa-info-circle"></i>
+              You will receive an M-Pesa prompt for
+              <strong>KES {{ invoice.balance_due|floatformat:0|intcomma }}</strong>.
+              Enter your PIN to complete.
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg btn-block">
+              <i class="fas fa-mobile-screen"></i> Send M-Pesa Prompt
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Stripe ── -->
+    <div id="pay-stripe" class="pay-section" hidden>
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title"><i class="fas fa-credit-card"></i> Card Payment</span>
+        </div>
+        <div class="card-body">
+          <div id="stripe-intent-error"
+               style="display:none;background:var(--red-bg);border:1px solid var(--red);
+                      border-radius:var(--r8);padding:12px;margin-bottom:14px;
+                      font-size:.875rem;color:#b91c1c"></div>
+
+          <div id="card-element"
+               style="border:1.5px solid var(--border);border-radius:var(--r8);
+                      padding:13px;margin-bottom:18px;background:var(--surface)"></div>
+
+          <div id="stripe-card-error"
+               style="display:none;background:var(--red-bg);border:1px solid var(--red);
+                      border-radius:var(--r8);padding:12px;margin-bottom:12px;
+                      font-size:.875rem;color:#b91c1c"></div>
+
+          <div id="stripe-success"
+               style="display:none;background:var(--green-bg);border:1px solid var(--green);
+                      border-radius:var(--r8);padding:14px;margin-bottom:14px;
+                      font-size:.9375rem;color:#166534;text-align:center">
+            <i class="fas fa-check-circle"></i> Payment successful — updating your invoice…
+          </div>
+
+          <button id="stripe-pay-btn" class="btn btn-primary btn-lg btn-block">
+            <i class="fas fa-lock"></i> Pay KES {{ invoice.balance_due|floatformat:0|intcomma }}
+          </button>
+          <p style="font-size:.8rem;color:var(--txt3);text-align:center;margin-top:10px">
+            <i class="fas fa-shield-halved"></i> Secured by Stripe
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PayPal ── -->
+    <div id="pay-paypal" class="pay-section" hidden>
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title"><i class="fab fa-paypal"></i> PayPal</span>
+        </div>
+        <div class="card-body">
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="gateway" value="paypal">
+            <div style="background:var(--blue-bg);border-radius:var(--r8);padding:16px;
+                        margin-bottom:20px;font-size:.9375rem;color:var(--blue);text-align:center">
+              You'll be redirected to PayPal to complete payment of
+              <strong>KES {{ invoice.balance_due|floatformat:0|intcomma }}</strong>
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg btn-block">
+              <i class="fab fa-paypal"></i> Continue to PayPal
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════
+         PHYSICAL CASH
+         Records payment immediately, issues receipt.
+         ══════════════════════════════════════════════ -->
+    <div id="pay-cash" class="pay-section" hidden>
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title"><i class="fas fa-money-bill-wave"></i> Physical Cash Payment</span>
+        </div>
+        <div class="card-body">
+
+          <!-- QR scanner toggle -->
+          <div style="display:flex;align-items:center;justify-content:space-between;
+                      margin-bottom:18px;padding:12px 14px;
+                      background:var(--slate-50);border-radius:var(--r8);
+                      border:1px solid var(--border)">
+            <div>
+              <div style="font-weight:600;font-size:.9375rem">Scan QR Code</div>
+              <div style="font-size:.8rem;color:var(--txt3);margin-top:2px">
+                Auto-fill receipt details from a QR code
+              </div>
+            </div>
+            <button type="button" id="cashQrToggleBtn" class="btn btn-outline btn-sm"
+                    onclick="toggleQrScanner('cash')">
+              <i class="fas fa-qrcode"></i> Scan QR
+            </button>
+          </div>
+
+          <!-- QR camera preview (hidden until activated) -->
+          <div id="cash-qr-area" hidden>
+            <div style="position:relative;border-radius:var(--r12);overflow:hidden;
+                        margin-bottom:14px;border:2px solid var(--brass)">
+              <video id="cash-qr-video" autoplay playsinline muted
+                     style="width:100%;display:block;max-height:240px;object-fit:cover"></video>
+              <!-- Scanning reticle overlay -->
+              <div style="position:absolute;inset:0;display:flex;align-items:center;
+                          justify-content:center;pointer-events:none">
+                <div style="width:160px;height:160px;border:3px solid var(--brass);
+                            border-radius:var(--r12);
+                            box-shadow:0 0 0 9999px rgba(4,14,30,.55)"></div>
+              </div>
+            </div>
+            <p style="font-size:.8125rem;color:var(--txt3);text-align:center;margin-bottom:14px">
+              <i class="fas fa-info-circle"></i>
+              Point camera at QR code — fields fill automatically
+            </p>
+            <button type="button" class="btn btn-ghost btn-sm btn-block"
+                    onclick="stopQrScanner('cash')">
+              <i class="fas fa-times"></i> Cancel Scan
+            </button>
+            <div id="cash-qr-result" style="display:none;margin-top:10px;padding:10px;
+                 background:var(--green-bg);border:1px solid var(--green);
+                 border-radius:var(--r8);font-size:.875rem;color:#166534">
+              <i class="fas fa-check-circle"></i> <span id="cash-qr-msg"></span>
+            </div>
+          </div>
+
+          <form method="post" id="cashPayForm">
+            {% csrf_token %}
+            <input type="hidden" name="gateway" value="cash">
+
+            <div class="form-group">
+              <label class="form-label">Receipt / Reference Number
+                <span class="opt">optional</span>
+              </label>
+              <input type="text" name="reference" id="cash_reference" class="form-control"
+                     placeholder="e.g. CASH-2024-001">
+              <p class="form-hint">A unique reference for this cash transaction</p>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Received By *</label>
+              <input type="text" name="received_by" id="cash_received_by" class="form-control"
+                     placeholder="Name of person who received cash" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Notes <span class="opt">optional</span></label>
+              <textarea name="notes" id="cash_notes" class="form-control" rows="2"
+                        placeholder="Any additional notes about this payment"></textarea>
+            </div>
+
+            <div style="background:var(--green-bg);border:1px solid var(--green);
+                        border-radius:var(--r8);padding:12px;margin-bottom:18px;
+                        font-size:.875rem;color:#166534">
+              <i class="fas fa-receipt"></i>
+              A receipt for <strong>KES {{ invoice.balance_due|floatformat:0|intcomma }}</strong>
+              will be generated and emailed to the tenant immediately.
+            </div>
+
+            <button type="submit" class="btn btn-success btn-lg btn-block">
+              <i class="fas fa-check"></i> Confirm Cash &amp; Issue Receipt
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════
+         BANK TRANSFER
+         Owner enters bank confirmation code/details.
+         QR scanner can auto-fill from bank slip QR.
+         ══════════════════════════════════════════════ -->
+    <div id="pay-bank" class="pay-section" hidden>
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title"><i class="fas fa-building-columns"></i> Bank Transfer Details</span>
+        </div>
+        <div class="card-body">
+
+          <!-- QR scanner toggle for bank -->
+          <div style="display:flex;align-items:center;justify-content:space-between;
+                      margin-bottom:18px;padding:12px 14px;
+                      background:var(--slate-50);border-radius:var(--r8);
+                      border:1px solid var(--border)">
+            <div>
+              <div style="font-weight:600;font-size:.9375rem">Scan Bank Slip QR</div>
+              <div style="font-size:.8rem;color:var(--txt3);margin-top:2px">
+                Scan QR from bank confirmation slip to auto-fill
+              </div>
+            </div>
+            <button type="button" id="bankQrToggleBtn" class="btn btn-outline btn-sm"
+                    onclick="toggleQrScanner('bank')">
+              <i class="fas fa-qrcode"></i> Scan QR
+            </button>
+          </div>
+
+          <!-- Bank QR camera preview -->
+          <div id="bank-qr-area" hidden>
+            <div style="position:relative;border-radius:var(--r12);overflow:hidden;
+                        margin-bottom:14px;border:2px solid var(--brass)">
+              <video id="bank-qr-video" autoplay playsinline muted
+                     style="width:100%;display:block;max-height:240px;object-fit:cover"></video>
+              <div style="position:absolute;inset:0;display:flex;align-items:center;
+                          justify-content:center;pointer-events:none">
+                <div style="width:160px;height:160px;border:3px solid var(--brass);
+                            border-radius:var(--r12);
+                            box-shadow:0 0 0 9999px rgba(4,14,30,.55)"></div>
+              </div>
+            </div>
+            <p style="font-size:.8125rem;color:var(--txt3);text-align:center;margin-bottom:14px">
+              <i class="fas fa-info-circle"></i>
+              Point camera at the QR on your bank slip
+            </p>
+            <button type="button" class="btn btn-ghost btn-sm btn-block"
+                    onclick="stopQrScanner('bank')">
+              <i class="fas fa-times"></i> Cancel Scan
+            </button>
+            <div id="bank-qr-result" style="display:none;margin-top:10px;padding:10px;
+                 background:var(--green-bg);border:1px solid var(--green);
+                 border-radius:var(--r8);font-size:.875rem;color:#166534">
+              <i class="fas fa-check-circle"></i> <span id="bank-qr-msg"></span>
+            </div>
+          </div>
+
+          <form method="post" id="bankPayForm">
+            {% csrf_token %}
+            <input type="hidden" name="gateway" value="bank">
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Bank Name *</label>
+                <input type="text" name="bank_name" id="bank_name" class="form-control"
+                       placeholder="e.g. Equity Bank" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Branch <span class="opt">optional</span></label>
+                <input type="text" name="bank_branch" id="bank_branch" class="form-control"
+                       placeholder="e.g. Westlands">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Transaction / Confirmation Code *</label>
+                <input type="text" name="bank_code" id="bank_code" class="form-control"
+                       placeholder="e.g. EQB240321001234" required>
+                <p class="form-hint">The bank reference number from the transfer slip</p>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Transfer Date *</label>
+                <input type="date" name="bank_date" id="bank_date" class="form-control"
+                       value="{{ today }}" required>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Sender Account / Name
+                  <span class="opt">optional</span>
+                </label>
+                <input type="text" name="bank_sender" id="bank_sender" class="form-control"
+                       placeholder="Account name or number">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Amount Transferred (KES) *</label>
+                <input type="number" name="bank_amount" id="bank_amount" class="form-control"
+                       value="{{ invoice.balance_due|floatformat:0 }}"
+                       min="1" step="0.01" required>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Notes <span class="opt">optional</span></label>
+              <textarea name="notes" id="bank_notes" class="form-control" rows="2"
+                        placeholder="Any additional notes"></textarea>
+            </div>
+
+            <div style="background:var(--blue-bg);border:1px solid var(--blue);
+                        border-radius:var(--r8);padding:12px;margin-bottom:18px;
+                        font-size:.875rem;color:var(--blue)">
+              <i class="fas fa-info-circle"></i>
+              After verification, a receipt will be generated and emailed to the tenant.
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg btn-block">
+              <i class="fas fa-building-columns"></i> Record Bank Transfer &amp; Issue Receipt
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- No method selected yet -->
+    <div id="no-method-msg" style="text-align:center;padding:36px;color:var(--txt3)">
+      <i class="fas fa-arrow-up" style="font-size:2rem;margin-bottom:10px;display:block"></i>
+      Select a payment method above to continue
+    </div>
+
+  </div><!-- /left -->
+
+  <!-- ── Right: invoice summary ── -->
+  <div>
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title"><i class="fas fa-receipt"></i> Summary</span>
+      </div>
+      <div class="card-body" style="font-size:.9375rem">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;justify-content:space-between">
+            <span style="color:var(--txt3)">Invoice</span>
+            <span style="font-weight:600">{{ invoice.invoice_number }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between">
+            <span style="color:var(--txt3)">Tenant</span>
+            <span style="font-weight:600">{{ invoice.lease.tenant.get_full_name }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between">
+            <span style="color:var(--txt3)">Property</span>
+            <span style="font-weight:600">{{ invoice.lease.unit.property.name }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between">
+            <span style="color:var(--txt3)">Unit</span>
+            <span style="font-weight:600">#{{ invoice.lease.unit.unit_number }}</span>
+          </div>
+          <hr style="border:none;border-top:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between">
+            <span style="color:var(--txt3)">Invoice Total</span>
+            <span>KES {{ invoice.total_amount|floatformat:0|intcomma }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between">
+            <span style="color:var(--txt3)">Already Paid</span>
+            <span style="color:var(--green)">KES {{ invoice.amount_paid|floatformat:0|intcomma }}</span>
+          </div>
+          <hr style="border:none;border-top:2px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;font-size:1.125rem">
+            <span style="font-weight:700">Balance Due</span>
+            <span style="font-family:var(--fd);font-size:1.5rem;font-weight:500;
+                         color:{% if invoice.balance_due > 0 %}var(--red){% else %}var(--green){% endif %}">
+              KES {{ invoice.balance_due|floatformat:0|intcomma }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:14px;font-size:.8rem;color:var(--txt3)">
+      <i class="fas fa-lock"></i> Payments are secure and encrypted
+    </div>
+  </div>
+
+</div><!-- /grid -->
+
+
+<!-- ══════════════════════════════════════════════════════════
+     JAVASCRIPT
+     1. Method selector
+     2. QR scanner (jsQR via CDN)
+     3. Stripe 3-step flow
+     ══════════════════════════════════════════════════════════ -->
+
+<script>
+/* ── 1. Payment method selector ── */
+(function () {
+  var methods  = document.querySelectorAll(".pay-method");
+  var sections = document.querySelectorAll(".pay-section");
+  var noMsg    = document.getElementById("no-method-msg");
+
+  methods.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      methods.forEach(function (b) { b.classList.remove("active", "sel", "pay-method--active"); });
+      btn.classList.add("active", "sel", "pay-method--active");
+      var gw = btn.dataset.gateway;
+      sections.forEach(function (s) { s.hidden = true; });
+      var target = document.getElementById("pay-" + gw);
+      if (target) target.hidden = false;
+      noMsg.style.display = "none";
+    });
+  });
+}());
+</script>
+
+<!-- jsQR library for QR code decoding from camera frames -->
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+
+<script>
+/* ── 2. QR Scanner ──
+   Each payment section (cash / bank) has its own <video> element.
+   toggleQrScanner(prefix) starts the camera; stopQrScanner(prefix) stops it.
+   Decoded text is parsed as JSON or key=value pairs and mapped to form fields.
+*/
+(function () {
+  var scanners = {};   /* prefix → { stream, animFrame } */
+
+  /* Map decoded QR text into the form fields for the given prefix */
+  function fillFromQr(prefix, text) {
+    var data = {};
+
+    /* Try JSON first (e.g. {"bank_code":"EQB001","bank_name":"Equity"}) */
+    try { data = JSON.parse(text); } catch (_) {}
+
+    /* Fall back: key=value pairs separated by newlines or semicolons */
+    if (!Object.keys(data).length) {
+      text.split(/[\n;]/).forEach(function (pair) {
+        var idx = pair.indexOf("=");
+        if (idx > 0) {
+          data[pair.slice(0, idx).trim()] = pair.slice(idx + 1).trim();
+        }
+      });
+    }
+
+    /* ── Cash field mapping ── */
+    if (prefix === "cash") {
+      if (data.reference)   setField("cash_reference",   data.reference);
+      if (data.received_by) setField("cash_received_by", data.received_by);
+      if (data.notes)       setField("cash_notes",       data.notes);
+      showQrResult("cash", "Fields filled from QR code.");
+    }
+
+    /* ── Bank field mapping ── */
+    if (prefix === "bank") {
+      if (data.bank_name)   setField("bank_name",   data.bank_name);
+      if (data.bank_branch) setField("bank_branch", data.bank_branch);
+      if (data.bank_code || data.ref || data.transaction_id)
+        setField("bank_code", data.bank_code || data.ref || data.transaction_id);
+      if (data.bank_date || data.date)
+        setField("bank_date", data.bank_date || data.date);
+      if (data.bank_sender || data.sender || data.account_name)
+        setField("bank_sender", data.bank_sender || data.sender || data.account_name);
+      if (data.bank_amount || data.amount)
+        setField("bank_amount", data.bank_amount || data.amount);
+      if (data.notes)
+        setField("bank_notes", data.notes);
+      showQrResult("bank", "Bank details filled from QR code.");
+    }
+
+    /* Stop scanning after a successful decode */
+    stopQrScanner(prefix);
+  }
+
+  function setField(id, value) {
+    var el = document.getElementById(id);
+    if (el) el.value = value;
+  }
+
+  function showQrResult(prefix, msg) {
+    var resultEl = document.getElementById(prefix + "-qr-result");
+    var msgEl    = document.getElementById(prefix + "-qr-msg");
+    if (resultEl) resultEl.style.display = "block";
+    if (msgEl)    msgEl.textContent = msg;
+  }
+
+  /* Start camera and decode loop */
+  window.toggleQrScanner = function (prefix) {
+    var area     = document.getElementById(prefix + "-qr-area");
+    var video    = document.getElementById(prefix + "-qr-video");
+    var resultEl = document.getElementById(prefix + "-qr-result");
+
+    if (!area || !video) return;
+
+    /* Hide previous result */
+    if (resultEl) resultEl.style.display = "none";
+
+    area.hidden = false;
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      showQrResult(prefix, "Camera not available on this device.");
+      return;
+    }
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+      .then(function (stream) {
+        video.srcObject = stream;
+
+        var canvas  = document.createElement("canvas");
+        var ctx     = canvas.getContext("2d");
+
+        function tick() {
+          if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            canvas.width  = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            var code = jsQR(imageData.data, imageData.width, imageData.height, {
+              inversionAttempts: "dontInvert",
+            });
+            if (code && code.data) {
+              fillFromQr(prefix, code.data);
+              return; /* stop loop after successful scan */
+            }
+          }
+          scanners[prefix] = scanners[prefix] || {};
+          scanners[prefix].animFrame = requestAnimationFrame(tick);
+        }
+
+        scanners[prefix] = { stream: stream };
+        tick();
+      })
+      .catch(function (err) {
+        showQrResult(prefix, "Camera access denied: " + err.message);
+      });
+  };
+
+  /* Stop camera stream and hide preview */
+  window.stopQrScanner = function (prefix) {
+    var area  = document.getElementById(prefix + "-qr-area");
+    var video = document.getElementById(prefix + "-qr-video");
+
+    if (scanners[prefix]) {
+      if (scanners[prefix].animFrame) cancelAnimationFrame(scanners[prefix].animFrame);
+      if (scanners[prefix].stream)   scanners[prefix].stream.getTracks().forEach(function (t) { t.stop(); });
+      delete scanners[prefix];
+    }
+    if (video) video.srcObject = null;
+    if (area)  area.hidden = true;
+  };
+
+}());
+</script>
+
+{% if stripe_pk %}
+<!-- ── 3. Stripe 3-step flow ── -->
+<script>
+(function () {
+  "use strict";
+
+  var CSRF        = "{{ csrf_token }}";
+  var PAY_URL     = "{% url 'payments:pay' invoice.pk %}";
+  var CONFIRM_URL = "{% url 'payments:stripe-confirm' %}";
+  var DETAIL_URL  = "{% url 'payments:invoice-detail' invoice.pk %}";
+
+  var stripe   = Stripe("{{ stripe_pk }}");
+  var elements = stripe.elements();
+  var cardEl   = elements.create("card", {
+    style: {
+      base: {
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
+        fontSize:   "15px",
+        color:      "#0f172a",
+      },
+    },
+  });
+  cardEl.mount("#card-element");
+
+  cardEl.on("change", function (e) {
+    setError("stripe-card-error", e.error ? e.error.message : null);
+  });
+
+  function setError(id, msg) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.textContent   = msg || "";
+    el.style.display = msg ? "block" : "none";
+  }
+
+  var btn             = document.getElementById("stripe-pay-btn");
+  var originalBtnHTML = btn.innerHTML;
+
+  function setBusy(label) {
+    btn.disabled  = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + label;
+  }
+  function resetBtn() {
+    btn.disabled  = false;
+    btn.innerHTML = originalBtnHTML;
+    btn.style.display = "block";
+  }
+
+  btn.addEventListener("click", async function () {
+    setError("stripe-intent-error", null);
+    setError("stripe-card-error",   null);
+    setBusy("Initialising…");
+
+    /* Step 1 — create PaymentIntent */
+    var initResp, initData;
+    try {
+      initResp = await fetch(PAY_URL, {
+        method:  "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded", "X-CSRFToken": CSRF },
+        body:    "gateway=stripe",
+      });
+      initData = await initResp.json();
+    } catch (_) {
+      setError("stripe-intent-error", "Network error — please check your connection.");
+      resetBtn(); return;
+    }
+
+    if (!initData.ok || !initData.client_secret) {
+      setError("stripe-intent-error", initData.error || "Could not initialise payment.");
+      resetBtn(); return;
+    }
+
+    /* Step 2 — confirm card */
+    setBusy("Processing card…");
+    var confirmResult;
+    try {
+      confirmResult = await stripe.confirmCardPayment(initData.client_secret, {
+        payment_method: { card: cardEl },
+      });
+    } catch (_) {
+      setError("stripe-card-error", "Stripe error — please try again.");
+      resetBtn(); return;
+    }
+
+    if (confirmResult.error) {
+      setError("stripe-card-error", confirmResult.error.message);
+      resetBtn(); return;
+    }
+    if (confirmResult.paymentIntent.status !== "succeeded") {
+      setError("stripe-card-error", "Payment did not complete. Please try again.");
+      resetBtn(); return;
+    }
+
+    /* Step 3 — tell Django to settle and issue receipt */
+    setBusy("Confirming…");
+    document.getElementById("stripe-success").style.display = "block";
+    btn.style.display = "none";
+
+    var confResp, confData;
+    try {
+      confResp = await fetch(CONFIRM_URL, {
+        method:  "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded", "X-CSRFToken": CSRF },
+        body:    "pi_id=" + encodeURIComponent(confirmResult.paymentIntent.id),
+      });
+      confData = await confResp.json();
+    } catch (_) {
+      document.getElementById("stripe-success").style.display = "none";
+      setError("stripe-card-error",
+        "Payment taken but network error updating invoice. Contact support with ref: " +
+        confirmResult.paymentIntent.id);
+      resetBtn(); return;
+    }
+
+    if (confData.ok) {
+      setTimeout(function () { window.location.href = DETAIL_URL; }, 1500);
+    } else {
+      document.getElementById("stripe-success").style.display = "none";
+      setError("stripe-card-error",
+        (confData.error || "Invoice update failed.") +
+        " Contact support with ref: " + confirmResult.paymentIntent.id);
+      resetBtn();
+    }
+  });
+}());
+</script>
+{% endif %}
+
+{% endblock %}

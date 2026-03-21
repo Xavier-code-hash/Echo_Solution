@@ -1,0 +1,57 @@
+{% extends "base/app.html" %}
+{% load humanize %}
+{% block title %}Inbox{% endblock %}
+{% block topbar_title %}Messages{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1 class="page-title">Inbox</h1><p class="page-sub">{{ messages_list|length }} message{{ messages_list|length|pluralize }}</p></div>
+  <a href="{% url 'messaging:compose' %}" class="btn btn-primary"><i class="fas fa-pen"></i> Compose</a>
+</div>
+
+{% if messages_list %}
+<div class="card">
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>From</th><th>Subject</th><th>Received</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {% for msg in messages_list %}
+        <tr style="{% if not msg.is_read %}background:var(--brass-pale){% endif %}">
+          <td>
+            <div style="display:flex;align-items:center;gap:9px">
+              <div class="sb-av" style="width:30px;height:30px;font-size:.65rem;flex-shrink:0;background:linear-gradient(135deg,var(--brass),var(--navy-700))">
+                {% if msg.sender %}{{ msg.sender.first_name.0 }}{{ msg.sender.last_name.0 }}{% else %}?{% endif %}
+              </div>
+              <span style="font-weight:{% if not msg.is_read %}700{% else %}400{% endif %}">
+                {{ msg.sender.get_full_name|default:"System" }}
+              </span>
+            </div>
+          </td>
+          <td style="font-weight:{% if not msg.is_read %}600{% else %}400{% endif %}">
+            <a href="{% url 'messaging:message-detail' msg.pk %}">{{ msg.subject }}</a>
+          </td>
+          <td style="color:var(--txt3)">{{ msg.created_at|timesince }} ago</td>
+          <td>
+            {% if not msg.is_read %}
+              <span class="badge badge-brass">Unread</span>
+            {% else %}
+              <span class="badge badge-slate">Read</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{% url 'messaging:message-detail' msg.pk %}" class="btn btn-ghost btn-sm"><i class="fas fa-eye"></i></a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card"><div class="empty">
+  <div class="empty-ic"><i class="fas fa-envelope"></i></div>
+  <div class="empty-title">Inbox is empty</div>
+  <div class="empty-sub">No messages yet. Send one to get started.</div>
+  <a href="{% url 'messaging:compose' %}" class="btn btn-primary"><i class="fas fa-pen"></i> Compose Message</a>
+</div></div>
+{% endif %}
+{% endblock %}

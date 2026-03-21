@@ -1,0 +1,89 @@
+{% extends "base/app.html" %}
+{% load humanize %}
+{% block title %}Lease — {{ lease.tenant.get_full_name }}{% endblock %}
+{% block topbar_title %}Lease Detail{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1 class="page-title">Lease — {{ lease.tenant.get_full_name }}</h1>
+    <p class="page-sub">{{ lease.unit.property.name }} &middot; Unit #{{ lease.unit.unit_number }}</p>
+  </div>
+  <div style="display:flex;gap:10px">
+    <a href="{% url 'tenants:leases' %}" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i> All Leases</a>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 300px;gap:22px">
+  <div style="display:flex;flex-direction:column;gap:22px">
+    <!-- Lease details -->
+    <div class="card">
+      <div class="card-head"><span class="card-title"><i class="fas fa-file-contract"></i> Lease Terms</span>
+        <span class="badge {% if lease.status == 'active' %}badge-green{% elif lease.status == 'terminated' %}badge-red{% else %}badge-amber{% endif %}">{{ lease.get_status_display }}</span>
+      </div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+          <div><div style="font-size:.8rem;color:var(--txt3);margin-bottom:4px">Tenant</div><div style="font-weight:600"><a href="{% url 'tenants:detail' lease.tenant.pk %}">{{ lease.tenant.get_full_name }}</a></div></div>
+          <div><div style="font-size:.8rem;color:var(--txt3);margin-bottom:4px">Unit</div><div style="font-weight:600">{{ lease.unit.property.name }} #{{ lease.unit.unit_number }}</div></div>
+          <div><div style="font-size:.8rem;color:var(--txt3);margin-bottom:4px">Start Date</div><div style="font-weight:600">{{ lease.start_date|date:"d F Y" }}</div></div>
+          <div><div style="font-size:.8rem;color:var(--txt3);margin-bottom:4px">End Date</div><div style="font-weight:600">{{ lease.end_date|date:"d F Y" }}</div></div>
+          <div><div style="font-size:.8rem;color:var(--txt3);margin-bottom:4px">Monthly Rent</div><div style="font-family:var(--fd);font-size:1.5rem;color:var(--brass)">KES {{ lease.monthly_rent|floatformat:0|intcomma }}</div></div>
+          <div><div style="font-size:.8rem;color:var(--txt3);margin-bottom:4px">Security Deposit</div><div style="font-weight:600">KES {{ lease.deposit|floatformat:0|intcomma }}</div></div>
+          <div><div style="font-size:.8rem;color:var(--txt3);margin-bottom:4px">Rent Due Day</div><div style="font-weight:600">Day {{ lease.rent_due_day }} of each month</div></div>
+          <div><div style="font-size:.8rem;color:var(--txt3);margin-bottom:4px">Late Fee</div><div style="font-weight:600">KES {{ lease.late_fee|floatformat:0|intcomma }}</div></div>
+          {% if lease.status == 'active' %}
+          <div><div style="font-size:.8rem;color:var(--txt3);margin-bottom:4px">Days Remaining</div>
+            <div><span class="badge {% if lease.days_remaining <= 30 %}badge-red{% elif lease.days_remaining <= 60 %}badge-amber{% else %}badge-green{% endif %}" style="font-size:.875rem;padding:5px 12px">{{ lease.days_remaining }} days</span></div></div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% if lease.status == 'active' %}
+    <!-- Actions -->
+    <div class="card">
+      <div class="card-head"><span class="card-title"><i class="fas fa-cog"></i> Actions</span></div>
+      <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap">
+        <form method="post">
+          {% csrf_token %}<input type="hidden" name="action" value="renew">
+          <button type="submit" class="btn btn-outline" onclick="return confirm('Renew this lease for 1 year?')">
+            <i class="fas fa-rotate-right"></i> Renew 1 Year
+          </button>
+        </form>
+        <a href="{% url 'payments:invoice-create' %}?lease={{ lease.pk }}" class="btn btn-primary">
+          <i class="fas fa-plus"></i> Create Invoice
+        </a>
+        <form method="post">
+          {% csrf_token %}<input type="hidden" name="action" value="terminate">
+          <button type="submit" class="btn btn-danger" onclick="return confirm('Terminate this lease? This will mark the unit as available.')">
+            <i class="fas fa-ban"></i> Terminate Lease
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Sidebar -->
+  <div style="display:flex;flex-direction:column;gap:18px">
+    <div class="card">
+      <div class="card-head"><span class="card-title"><i class="fas fa-user"></i> Tenant</span></div>
+      <div class="card-body" style="font-size:.9375rem">
+        <div style="text-align:center;margin-bottom:16px">
+          <div class="sb-av" style="width:52px;height:52px;font-size:1rem;margin:0 auto 10px;background:linear-gradient(135deg,var(--brass),var(--navy-700))">{{ lease.tenant.first_name.0 }}{{ lease.tenant.last_name.0 }}</div>
+          <div style="font-weight:700">{{ lease.tenant.get_full_name }}</div>
+          <div style="font-size:.8rem;color:var(--txt3)">{{ lease.tenant.email }}</div>
+        </div>
+        <a href="{% url 'tenants:detail' lease.tenant.pk %}" class="btn btn-outline btn-block btn-sm">View Profile</a>
+      </div>
+    </div>
+    {% if lease.document %}
+    <div class="card">
+      <div class="card-head"><span class="card-title"><i class="fas fa-file-pdf"></i> Document</span></div>
+      <div class="card-body">
+        <a href="{{ lease.document.url }}" class="btn btn-outline btn-block btn-sm" target="_blank"><i class="fas fa-download"></i> Download Lease</a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

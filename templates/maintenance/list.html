@@ -1,0 +1,65 @@
+{% extends "base/app.html" %}
+{% load humanize %}
+{% block title %}Maintenance{% endblock %}
+{% block topbar_title %}Maintenance Requests{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1 class="page-title">Maintenance</h1><p class="page-sub">{{ requests|length }} request{{ requests|length|pluralize }}</p></div>
+  <a href="{% url 'maintenance:create' %}" class="btn btn-primary"><i class="fas fa-plus"></i> New Request</a>
+</div>
+
+<!-- Filter pills -->
+<div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
+  <a href="{% url 'maintenance:list' %}" class="btn btn-sm {% if not request.GET.status %}btn-primary{% else %}btn-ghost{% endif %}">All</a>
+  <a href="?status=open"        class="btn btn-sm {% if request.GET.status == 'open' %}btn-primary{% else %}btn-ghost{% endif %}">Open</a>
+  <a href="?status=in_progress" class="btn btn-sm {% if request.GET.status == 'in_progress' %}btn-primary{% else %}btn-ghost{% endif %}">In Progress</a>
+  <a href="?status=resolved"    class="btn btn-sm {% if request.GET.status == 'resolved' %}btn-primary{% else %}btn-ghost{% endif %}">Resolved</a>
+</div>
+
+{% if requests %}
+<div class="card">
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead>
+        <tr><th>Issue</th><th>Property / Unit</th><th>Submitted By</th><th>Category</th><th>Priority</th><th>Status</th><th>Date</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for r in requests %}
+        <tr>
+          <td>
+            <a href="{% url 'maintenance:detail' r.pk %}" style="font-weight:600">{{ r.title|truncatechars:35 }}</a>
+            {% if r.image %}<span style="font-size:.75rem;color:var(--brass);margin-left:6px"><i class="fas fa-image"></i></span>{% endif %}
+          </td>
+          <td>
+            <div>{{ r.unit.property.name }}</div>
+            <div style="font-size:.8rem;color:var(--txt3)">Unit #{{ r.unit.unit_number }}</div>
+          </td>
+          <td>{{ r.submitted_by.get_full_name|default:"—" }}</td>
+          <td><span class="badge badge-slate">{{ r.get_category_display }}</span></td>
+          <td>
+            <span class="badge {% if r.priority == 'emergency' %}badge-red{% elif r.priority == 'high' %}badge-amber{% elif r.priority == 'medium' %}badge-blue{% else %}badge-slate{% endif %}">
+              {{ r.get_priority_display }}
+            </span>
+          </td>
+          <td>
+            <span class="badge {% if r.status == 'resolved' or r.status == 'closed' %}badge-green{% elif r.status == 'open' %}badge-red{% elif r.status == 'in_progress' %}badge-amber{% else %}badge-blue{% endif %}">
+              {{ r.get_status_display }}
+            </span>
+          </td>
+          <td style="color:var(--txt3)">{{ r.created_at|date:"d M Y" }}</td>
+          <td><a href="{% url 'maintenance:detail' r.pk %}" class="btn btn-ghost btn-sm"><i class="fas fa-eye"></i></a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card"><div class="empty">
+  <div class="empty-ic"><i class="fas fa-wrench"></i></div>
+  <div class="empty-title">No maintenance requests</div>
+  <div class="empty-sub">Submit a request when something needs attention.</div>
+  <a href="{% url 'maintenance:create' %}" class="btn btn-primary"><i class="fas fa-plus"></i> New Request</a>
+</div></div>
+{% endif %}
+{% endblock %}

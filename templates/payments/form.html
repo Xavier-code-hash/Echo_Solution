@@ -1,0 +1,170 @@
+{% extends "base/app.html" %}
+{% load humanize %}
+{% block title %}New Invoice{% endblock %}
+{% block topbar_title %}Create Invoice{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <h1 class="page-title">Create Invoice</h1>
+    <p class="page-sub">Generate a new invoice for a tenant</p>
+  </div>
+  <a href="{% url 'payments:list' %}" class="btn btn-ghost">
+    <i class="fas fa-arrow-left"></i> Back
+  </a>
+</div>
+
+<div class="card" style="max-width:720px">
+  <div class="card-head">
+    <span class="card-title"><i class="fas fa-file-invoice"></i> Invoice Details</span>
+  </div>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+      <div style="background:var(--red-bg);border:1px solid var(--red);border-radius:var(--r8);
+                  padding:12px 16px;margin-bottom:18px;color:var(--red);font-size:.875rem">
+        {% for e in form.non_field_errors %}{{ e }}{% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="form-group">
+        <label class="form-label">Lease / Tenant *</label>
+        {{ form.lease }}
+        {% if form.lease.errors %}
+          <p class="form-err"><i class="fas fa-circle-exclamation"></i> {{ form.lease.errors.0 }}</p>
+        {% endif %}
+        <p class="form-hint">Only active leases under your properties are shown</p>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Rent Amount (KES) *</label>
+          {{ form.rent_amount }}
+          {% if form.rent_amount.errors %}
+            <p class="form-err">{{ form.rent_amount.errors.0 }}</p>
+          {% endif %}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Late Fee (KES) <span class="opt">optional</span></label>
+          {{ form.late_fee }}
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Other Charges (KES) <span class="opt">optional</span></label>
+          {{ form.other_charges }}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Discount (KES) <span class="opt">optional</span></label>
+          {{ form.discount }}
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Invoice Date *</label>
+          {{ form.invoice_date }}
+          {% if form.invoice_date.errors %}
+            <p class="form-err">{{ form.invoice_date.errors.0 }}</p>
+          {% endif %}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Due Date *</label>
+          {{ form.due_date }}
+          {% if form.due_date.errors %}
+            <p class="form-err">{{ form.due_date.errors.0 }}</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Notes <span class="opt">optional</span></label>
+        {{ form.notes }}
+      </div>
+
+      <!-- Live total preview -->
+      <div style="background:var(--slate-50);border:1px solid var(--border);
+                  border-radius:var(--r12);padding:16px 20px;margin-bottom:22px">
+        <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;
+                    letter-spacing:.08em;color:var(--txt3);margin-bottom:12px">
+          Invoice Total Preview
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:.9375rem">
+          <div style="display:flex;justify-content:space-between">
+            <span style="color:var(--txt2)">Rent</span>
+            <span id="prev-rent">KES 0</span>
+          </div>
+          <div style="display:flex;justify-content:space-between" id="prev-late-row">
+            <span style="color:var(--txt2)">Late Fee</span>
+            <span id="prev-late" style="color:var(--red)">+ KES 0</span>
+          </div>
+          <div style="display:flex;justify-content:space-between" id="prev-other-row">
+            <span style="color:var(--txt2)">Other Charges</span>
+            <span id="prev-other">+ KES 0</span>
+          </div>
+          <div style="display:flex;justify-content:space-between" id="prev-disc-row">
+            <span style="color:var(--txt2)">Discount</span>
+            <span id="prev-disc" style="color:var(--green)">− KES 0</span>
+          </div>
+          <hr style="border:none;border-top:2px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;font-size:1.125rem">
+            <span style="font-weight:700">Total</span>
+            <span id="prev-total"
+                  style="font-family:var(--fd);font-size:1.5rem;font-weight:500;color:var(--brass)">
+              KES 0
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px">
+        <button type="submit" class="btn btn-primary btn-lg">
+          <i class="fas fa-file-invoice"></i> Create Invoice
+        </button>
+        <a href="{% url 'payments:list' %}" class="btn btn-ghost btn-lg">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+/* Live invoice total preview */
+(function () {
+  function val(id) {
+    return parseFloat(document.getElementById(id)?.value) || 0;
+  }
+  function fmt(n) {
+    return "KES " + n.toLocaleString("en-KE", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+  function update() {
+    var rent  = val("id_rent_amount");
+    var late  = val("id_late_fee");
+    var other = val("id_other_charges");
+    var disc  = val("id_discount");
+    var total = rent + late + other - disc;
+
+    document.getElementById("prev-rent").textContent  = fmt(rent);
+    document.getElementById("prev-late").textContent  = "+ " + fmt(late);
+    document.getElementById("prev-other").textContent = "+ " + fmt(other);
+    document.getElementById("prev-disc").textContent  = "− " + fmt(disc);
+    document.getElementById("prev-total").textContent = fmt(Math.max(0, total));
+
+    /* Hide rows that are zero */
+    document.getElementById("prev-late-row").style.display  = late  ? "flex" : "none";
+    document.getElementById("prev-other-row").style.display = other ? "flex" : "none";
+    document.getElementById("prev-disc-row").style.display  = disc  ? "flex" : "none";
+  }
+
+  ["id_rent_amount","id_late_fee","id_other_charges","id_discount"].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener("input", update);
+  });
+
+  update();
+}());
+</script>
+
+{% endblock %}

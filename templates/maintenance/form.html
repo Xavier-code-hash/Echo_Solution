@@ -1,0 +1,52 @@
+{% extends "base/app.html" %}
+{% block title %}New Maintenance Request{% endblock %}
+{% block topbar_title %}New Request{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1 class="page-title">New Maintenance Request</h1><p class="page-sub">Report an issue that needs attention</p></div>
+  <a href="{% url 'maintenance:list' %}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> Back</a>
+</div>
+<div class="card" style="max-width:680px">
+  <div class="card-head"><span class="card-title"><i class="fas fa-wrench"></i> Request Details</span></div>
+  <div class="card-body">
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+      <div class="form-group">
+        <label class="form-label">Unit *</label>
+        {{ form.unit }}
+        {% if form.unit.errors %}<p class="form-err">{{ form.unit.errors.0 }}</p>{% endif %}
+      </div>
+      <div class="form-group">
+        <label class="form-label">Issue Title *</label>
+        {{ form.title }}
+        {% if form.title.errors %}<p class="form-err">{{ form.title.errors.0 }}</p>{% endif %}
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Category *</label>
+          {{ form.category }}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Priority *</label>
+          {{ form.priority }}
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description *</label>
+        {{ form.description }}
+        <p class="form-hint">Describe the issue in detail — what you see, when it started, any relevant context.</p>
+        {% if form.description.errors %}<p class="form-err">{{ form.description.errors.0 }}</p>{% endif %}
+      </div>
+      <div class="form-group">
+        <label class="form-label">Photo <span class="opt">optional</span></label>
+        {{ form.image }}
+        <p class="form-hint">Upload a photo of the issue to help with assessment.</p>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:8px">
+        <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-paper-plane"></i> Submit Request</button>
+        <a href="{% url 'maintenance:list' %}" class="btn btn-ghost btn-lg">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

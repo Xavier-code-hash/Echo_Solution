@@ -1,0 +1,326 @@
+{% extends "base/app.html" %}
+{% load humanize %}
+{% block title %}Dashboard{% endblock %}
+{% block topbar_title %}Dashboard{% endblock %}
+{% block content %}
+
+{% if is_owner %}
+
+{# ── Owner KPIs ── #}
+<div class="kpi-grid">
+  <div class="kpi">
+    <div class="kpi-ic kpi-ic-brass"><i class="fas fa-building"></i></div>
+    <div>
+      <div class="kpi-label">Properties</div>
+      <div class="kpi-value">{{ total_props }}</div>
+    </div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-ic kpi-ic-blue"><i class="fas fa-door-open"></i></div>
+    <div>
+      <div class="kpi-label">Total Units</div>
+      <div class="kpi-value">{{ total_units }}</div>
+    </div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-ic kpi-ic-green"><i class="fas fa-check-circle"></i></div>
+    <div>
+      <div class="kpi-label">Occupied</div>
+      <div class="kpi-value">{{ occupied_units }}</div>
+      <div class="kpi-sub">of {{ total_units }} units</div>
+    </div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-ic kpi-ic-green"><i class="fas fa-coins"></i></div>
+    <div>
+      <div class="kpi-label">Monthly Income</div>
+      <div class="kpi-value" style="font-size:1.4rem">KES {{ monthly_income|floatformat:0|intcomma }}</div>
+    </div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-ic kpi-ic-red"><i class="fas fa-exclamation-circle"></i></div>
+    <div>
+      <div class="kpi-label">Overdue Invoices</div>
+      <div class="kpi-value">{{ overdue_count }}</div>
+    </div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-ic kpi-ic-amber"><i class="fas fa-wrench"></i></div>
+    <div>
+      <div class="kpi-label">Open Maintenance</div>
+      <div class="kpi-value">{{ open_maintenance }}</div>
+    </div>
+  </div>
+</div>
+
+{# ── Charts row ── #}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-bottom:22px">
+
+  {# Lease status doughnut #}
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title"><i class="fas fa-chart-pie"></i> Portfolio Overview</span>
+    </div>
+    <div class="card-body" style="display:flex;align-items:center;gap:28px">
+      <div class="chart-wrap" style="height:180px;flex:1">
+        <canvas id="portfolioChart"
+          data-chart="doughnut"
+          data-chart-labels='["Occupied","Available","Maintenance"]'
+          data-chart-data='[{{ occupied_units }},{{ total_units|add:"-"|add:occupied_units }},0]'
+          data-chart-center="{{ occupied_units }}/{{ total_units }}"
+        ></canvas>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;font-size:.875rem">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="width:10px;height:10px;border-radius:3px;background:#c8922a;display:inline-block"></span>
+          <span style="color:var(--txt2)">Occupied</span>
+          <span style="font-weight:700;margin-left:auto">{{ occupied_units }}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="width:10px;height:10px;border-radius:3px;background:#2563eb;display:inline-block"></span>
+          <span style="color:var(--txt2)">Available</span>
+          <span style="font-weight:700;margin-left:auto">{{ total_units|add:"-"|add:occupied_units }}</span>
+        </div>
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+          <div style="font-size:.8rem;color:var(--txt3)">Occupancy Rate</div>
+          <div style="font-family:var(--fd);font-size:1.5rem;color:var(--brass)">
+            {% if total_units %}
+              {% widthratio occupied_units total_units 100 %}%
+            {% else %}0%{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Rent reminders — upcoming invoice bar #}
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title"><i class="fas fa-bell"></i> Upcoming Rent Due</span>
+      <a href="{% url 'payments:list' %}" class="btn btn-ghost btn-sm">View All</a>
+    </div>
+    <div class="card-body">
+      {% if rent_reminders %}
+        <div style="display:flex;flex-direction:column;gap:10px">
+          {% for r in rent_reminders|slice:":5" %}
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;
+                      background:var(--slate-50);border-radius:var(--r8);
+                      border:1px solid var(--border)">
+            [data-theme=dark] & { background: rgba(255,255,255,.03); }
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600;font-size:.9rem;
+                          white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                {{ r.invoice.lease.tenant.get_full_name }}
+              </div>
+              <div style="font-size:.78rem;color:var(--txt3)">
+                {{ r.invoice.lease.unit.property.name }} #{{ r.invoice.lease.unit.unit_number }}
+              </div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-weight:600;font-size:.9rem">
+                KES {{ r.invoice.balance_due|floatformat:0|intcomma }}
+              </div>
+              <span class="badge {% if r.days <= 2 %}badge-red{% elif r.days <= 5 %}badge-amber{% else %}badge-blue{% endif %}">
+                {% if r.days == 0 %}Today{% elif r.days == 1 %}Tomorrow{% else %}{{ r.days }}d{% endif %}
+              </span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty" style="padding:28px">
+          <div class="empty-ic" style="font-size:1.75rem"><i class="fas fa-check-circle"></i></div>
+          <div class="empty-sub">No rent due in the next 7 days</div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{# ── Bottom row: expiring leases + maintenance ── #}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-bottom:22px">
+
+  {# Expiring leases #}
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title"><i class="fas fa-file-contract"></i> Expiring Leases</span>
+      <a href="{% url 'tenants:leases' %}?status=active" class="btn btn-ghost btn-sm">View All</a>
+    </div>
+    {% if expiring_leases %}
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>Tenant</th><th>Unit</th><th>Ends</th><th>Days</th></tr></thead>
+        <tbody>
+          {% for l in expiring_leases %}
+          <tr>
+            <td><a href="{% url 'tenants:detail' l.tenant.pk %}">{{ l.tenant.get_full_name }}</a></td>
+            <td style="font-size:.85rem;color:var(--txt3)">{{ l.unit.property.name }} #{{ l.unit.unit_number }}</td>
+            <td>{{ l.end_date|date:"d M Y" }}</td>
+            <td>
+              <span class="badge {% if l.days_remaining <= 30 %}badge-red{% elif l.days_remaining <= 60 %}badge-amber{% else %}badge-green{% endif %}">
+                {{ l.days_remaining }}d
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty" style="padding:32px">
+      <div class="empty-sub">No leases expiring soon</div>
+    </div>
+    {% endif %}
+  </div>
+
+  {# Open maintenance #}
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title"><i class="fas fa-wrench"></i> Open Maintenance</span>
+      <a href="{% url 'maintenance:list' %}?status=open" class="btn btn-ghost btn-sm">View All</a>
+    </div>
+    {% if recent_maintenance %}
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>Issue</th><th>Unit</th><th>Priority</th></tr></thead>
+        <tbody>
+          {% for r in recent_maintenance %}
+          <tr>
+            <td>
+              <a href="{% url 'maintenance:detail' r.pk %}" style="font-weight:600">
+                {{ r.title|truncatechars:30 }}
+              </a>
+            </td>
+            <td style="font-size:.85rem;color:var(--txt3)">{{ r.unit.property.name }} #{{ r.unit.unit_number }}</td>
+            <td>
+              <span class="badge {% if r.priority == 'emergency' %}badge-red{% elif r.priority == 'high' %}badge-amber{% elif r.priority == 'medium' %}badge-blue{% else %}badge-slate{% endif %}">
+                {{ r.get_priority_display }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty" style="padding:32px">
+      <div class="empty-sub">No open maintenance requests</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{# Overdue invoices #}
+{% if overdue_invoices %}
+<div class="card">
+  <div class="card-head">
+    <span class="card-title" style="color:var(--red)">
+      <i class="fas fa-exclamation-circle"></i> Overdue Invoices
+    </span>
+    <a href="{% url 'payments:list' %}" class="btn btn-ghost btn-sm">View All</a>
+  </div>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>Invoice</th><th>Tenant</th><th>Amount Due</th><th>Due Date</th><th></th></tr></thead>
+      <tbody>
+        {% for inv in overdue_invoices %}
+        <tr>
+          <td><a href="{% url 'payments:invoice-detail' inv.pk %}" style="font-weight:600">{{ inv.invoice_number }}</a></td>
+          <td><a href="{% url 'tenants:detail' inv.lease.tenant.pk %}">{{ inv.lease.tenant.get_full_name }}</a></td>
+          <td style="color:var(--red);font-weight:700">KES {{ inv.balance_due|floatformat:0|intcomma }}</td>
+          <td style="color:var(--txt3)">{{ inv.due_date|date:"d M Y" }}</td>
+          <td>
+            <a href="{% url 'payments:pay' inv.pk %}" class="btn btn-primary btn-sm">Pay</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% else %}
+
+{# ── Tenant dashboard ── #}
+<div class="kpi-grid">
+  {% for l in my_leases %}
+  <div class="kpi">
+    <div class="kpi-ic kpi-ic-blue"><i class="fas fa-home"></i></div>
+    <div>
+      <div class="kpi-label">{{ l.unit.property.name }}</div>
+      <div class="kpi-value" style="font-size:1.2rem">Unit #{{ l.unit.unit_number }}</div>
+      <div class="kpi-sub">KES {{ l.monthly_rent|floatformat:0|intcomma }}/mo</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:22px">
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title"><i class="fas fa-receipt"></i> Recent Invoices</span>
+      <a href="{% url 'payments:list' %}" class="btn btn-ghost btn-sm">All Invoices</a>
+    </div>
+    {% if my_invoices %}
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>Invoice</th><th>Amount</th><th>Due</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for inv in my_invoices %}
+          <tr>
+            <td><a href="{% url 'payments:invoice-detail' inv.pk %}">{{ inv.invoice_number }}</a></td>
+            <td>KES {{ inv.total_amount|floatformat:0|intcomma }}</td>
+            <td>{{ inv.due_date|date:"d M Y" }}</td>
+            <td>
+              <span class="badge badge-{% if inv.status == 'paid' %}green{% elif inv.status == 'overdue' %}red{% elif inv.status == 'partial' %}amber{% else %}slate{% endif %}">
+                {{ inv.get_status_display }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty"><div class="empty-sub">No invoices yet</div></div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title"><i class="fas fa-wrench"></i> My Maintenance</span>
+      <a href="{% url 'maintenance:create' %}" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> New</a>
+    </div>
+    {% if my_maintenance %}
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>Issue</th><th>Priority</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for r in my_maintenance %}
+          <tr>
+            <td><a href="{% url 'maintenance:detail' r.pk %}">{{ r.title|truncatechars:30 }}</a></td>
+            <td>
+              <span class="badge {% if r.priority == 'emergency' %}badge-red{% elif r.priority == 'high' %}badge-amber{% else %}badge-slate{% endif %}">
+                {{ r.get_priority_display }}
+              </span>
+            </td>
+            <td>
+              <span class="badge {% if r.status == 'resolved' %}badge-green{% elif r.status == 'open' %}badge-red{% else %}badge-amber{% endif %}">
+                {{ r.get_status_display }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty"><div class="empty-sub">No maintenance requests yet</div></div>
+    {% endif %}
+  </div>
+</div>
+
+{% endif %}
+
+{% endblock %}
