@@ -1,10 +1,42 @@
+# Echo Solutions — Python Dependencies
+# Install: pip install -r requirements.txt
+
+# Django core
 Django==4.2.29
-djangorestframework==3.14.0
+
+# Django extensions
 django-environ==0.11.2
-django-extensions==3.2.3
 django-cors-headers==4.3.1
+django-extensions==3.2.3
+
+# REST Framework
+djangorestframework==3.14.0
+
+# Google OAuth2
+google-auth==2.28.0
+google-auth-oauthlib==1.2.0
+google-auth-httplib2==0.2.0
+google-api-python-client==2.119.0
+
+# Security & password hashing
 argon2-cffi==23.1.0
 cryptography==41.0.7
-Pillow==10.3.0
+
+# Payment gateways
 stripe==8.11.0
 requests==2.31.0
+urllib3==2.2.1
+
+# PDF generation
+reportlab==4.1.0
+
+# Image processing
+Pillow==10.3.0
+
+# Production server
+gunicorn==22.0.0
+whitenoise==6.6.0
+
+# Database drivers (uncomment as needed)
+# psycopg2-binary==2.9.9
+# mysqlclient==2.2.4
