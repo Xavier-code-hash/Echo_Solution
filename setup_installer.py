@@ -57,9 +57,127 @@ LOG_FILE          = PROJECT_ROOT / "installer.log"
 MIN_PYTHON        = (3, 8)
 PIP_UPGRADE_PKGS  = ("pip", "setuptools", "wheel")
 
+# Runtime directories that must exist before Django (or its logging handlers)
+# can start.  We create them unconditionally and early — before any logger,
+# before any venv, before any package install.
+RUNTIME_DIRS: tuple[Path, ...] = (
+    PROJECT_ROOT / "logs",
+    PROJECT_ROOT / "media",
+    PROJECT_ROOT / "staticfiles",
+)
+
+def _bootstrap_runtime_dirs() -> None:
+    """
+    Guarantee that every runtime directory listed in RUNTIME_DIRS exists.
+
+    Called at import time so the directories are present before the logging
+    FileHandler is opened, before Django starts, and before Pillow (or any
+    other package) tries to write to disk.  Safe to call multiple times.
+    """
+    for d in RUNTIME_DIRS:
+        try:
+            d.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            # stderr only — the logger isn't up yet.
+            print(
+                f"[WARN] Could not create runtime directory {d}: {exc}",
+                file=sys.stderr,
+            )
+
+_bootstrap_runtime_dirs()
+
 # Timeout in seconds for each pip subprocess call.
 # Large packages (e.g. Pillow) can take time on slow connections.
 SUBPROCESS_TIMEOUT = 300
+
+# ---------------------------------------------------------------------------
+# Pillow install strategy
+# ---------------------------------------------------------------------------
+# Pillow is a C-extension that links against system imaging libraries.
+# On many Linux/macOS hosts the first install attempt fails because:
+#   • The binary wheel for the exact platform isn't available on PyPI, and
+#   • A compiler or a required system library (libjpeg, zlib, etc.) is absent.
+# We handle this with a three-tier cascade so the common cases succeed silently
+# and only a genuinely un-installable environment surfaces an actionable error.
+
+PILLOW_PACKAGE    = "Pillow"
+PILLOW_NAME_NORM  = "pillow"          # normalised (lower-case)
+
+# System-library install hints, keyed by OS identifier returned by current_os()
+PILLOW_SYSTEM_DEPS: dict[str, str] = {
+    "linux":   (
+        "sudo apt-get install -y libjpeg-dev zlib1g-dev libpng-dev "
+        "libfreetype6-dev liblcms2-dev libwebp-dev tcl8.6-dev tk8.6-dev "
+        "python3-dev gcc  "
+        " # Debian/Ubuntu\n"
+        "  # -- or --\n"
+        "  sudo dnf install -y libjpeg-devel zlib-devel libpng-devel "
+        "freetype-devel lcms2-devel libwebp-devel gcc python3-devel  "
+        " # Fedora/RHEL"
+    ),
+    "macos":   "brew install jpeg libpng freetype webp little-cms2",
+    "windows": (
+        "Pillow wheels are pre-built for Windows; "
+        "ensure you are using an officially supported CPython version "
+        "(3.8 – 3.13, 64-bit)."
+    ),
+}
+
+def _pillow_install_cascade(pip: str, pkg_spec: str, *, force: bool = False) -> bool:
+    """
+    Attempt to install Pillow via a three-tier strategy.
+
+    Tier 1 — pre-built binary wheel (fastest, no compiler needed).
+    Tier 2 — source distribution using the host's system libraries.
+    Tier 3 — ``Pillow-SIMD`` drop-in (common on headless Linux CI systems).
+
+    Returns True if any tier succeeds, False otherwise.
+    Logs actionable guidance on total failure rather than raising.
+    """
+    base_cmd = [pip, "install", "--progress-bar", "off"]
+    if force:
+        base_cmd.append("--force-reinstall")
+
+    # ── Tier 1: binary wheel ────────────────────────────────────────────────
+    log.info("  Pillow  →  Tier 1: attempting pre-built binary wheel …")
+    try:
+        run(base_cmd + ["--only-binary=:all:", pkg_spec])
+        log.info("  Pillow  ✔  installed via binary wheel")
+        return True
+    except (SubprocessError, SubprocessTimeout) as exc:
+        log.debug("  Pillow Tier 1 failed: %s", exc)
+
+    # ── Tier 2: source build ─────────────────────────────────────────────────
+    log.info("  Pillow  →  Tier 2: attempting source build (requires system libs) …")
+    try:
+        run(base_cmd + ["--no-binary=Pillow", pkg_spec], timeout=SUBPROCESS_TIMEOUT * 2)
+        log.info("  Pillow  ✔  installed from source")
+        return True
+    except (SubprocessError, SubprocessTimeout) as exc:
+        log.debug("  Pillow Tier 2 failed: %s", exc)
+
+    # ── Tier 3: Pillow-SIMD (Linux only) ────────────────────────────────────
+    if current_os() == "linux":
+        log.info("  Pillow  →  Tier 3: attempting Pillow-SIMD drop-in …")
+        try:
+            run(base_cmd + ["Pillow-SIMD"], timeout=SUBPROCESS_TIMEOUT * 2)
+            log.info("  Pillow  ✔  installed via Pillow-SIMD")
+            return True
+        except (SubprocessError, SubprocessTimeout) as exc:
+            log.debug("  Pillow Tier 3 failed: %s", exc)
+
+    # ── Total failure — emit actionable guidance ─────────────────────────────
+    sys_hint = PILLOW_SYSTEM_DEPS.get(current_os(), "Consult your OS documentation.")
+    log.error(
+        "  Pillow could not be installed automatically.\n"
+        "  This usually means system-level imaging libraries are missing.\n"
+        "  Install them and then re-run this script with --repair:\n\n"
+        "    %s\n\n"
+        "  Full Pillow install documentation:\n"
+        "    https://pillow.readthedocs.io/en/stable/installation.html",
+        sys_hint,
+    )
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -432,9 +550,23 @@ def install_packages(reqs: list[Requirement], *, force: bool = False) -> None:
         bulk_cmd.append("--force-reinstall")
     bulk_cmd += ["-r", str(REQUIREMENTS_FILE)]
 
+    # Separate Pillow from the rest so the bulk command never trips over it.
+    # Pillow gets its own cascade regardless of whether bulk succeeds.
+    pillow_reqs  = [r for r in reqs if r.name == PILLOW_NAME_NORM]
+    regular_reqs = [r for r in reqs if r.name != PILLOW_NAME_NORM]
+
     try:
         run(bulk_cmd, timeout=SUBPROCESS_TIMEOUT * 3)
         log.info("Bulk install succeeded  ✔")
+        # Still run the Pillow cascade for the Pillow packages
+        if pillow_reqs:
+            log.info("Running dedicated Pillow installer post bulk-install …")
+            for pr in pillow_reqs:
+                if not _pillow_install_cascade(pip, pr.raw, force=force):
+                    log.warning(
+                        "Pillow could not be verified after bulk install; "
+                        "see guidance above."
+                    )
         return
     except (SubprocessError, SubprocessTimeout) as exc:
         log.warning("Bulk install failed — switching to per-package fallback:")
@@ -456,6 +588,18 @@ def _install_individually(
     failed: list[tuple[Requirement, str]] = []
 
     for req in reqs:
+        # ── Special handling: Pillow ─────────────────────────────────────────
+        # Pillow is a compiled C-extension that frequently fails the generic
+        # pip path on systems without the right system imaging libraries.
+        # Delegate to the dedicated cascade installer instead.
+        if req.name == PILLOW_NAME_NORM:
+            log.info("  ▶  %-40s  [Pillow — using cascade installer]", req.raw)
+            if _pillow_install_cascade(pip, req.raw, force=force):
+                log.info("  ✔  %-40s", req.raw)
+            else:
+                failed.append((req, "Pillow cascade failed — see guidance above"))
+            continue
+        # ── Generic path ────────────────────────────────────────────────────
         cmd = [pip, "install", "--progress-bar", "off"]
         if force:
             cmd.append("--force-reinstall")
@@ -569,13 +713,25 @@ def check_env_file() -> None:
 
 
 def check_logs_directory() -> None:
-    """Create the logs/ directory that Django's RotatingFileHandler expects."""
-    logs_dir = PROJECT_ROOT / "logs"
-    if not logs_dir.is_dir():
-        logs_dir.mkdir(parents=True, exist_ok=True)
-        log.info("Created logs/ directory  ✔")
-    else:
-        log.info("logs/ directory present  ✔")
+    """
+    Ensure every runtime directory Django expects is present.
+
+    Calls the same _bootstrap_runtime_dirs() used at import time so this
+    function is idempotent: safe to call even if the directories already exist.
+    The log message differentiates newly created from pre-existing directories.
+    """
+    for d in RUNTIME_DIRS:
+        existed = d.is_dir()
+        try:
+            d.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            log.warning("Could not create runtime directory %s: %s", d, exc)
+            continue
+        rel = d.relative_to(PROJECT_ROOT)
+        if existed:
+            log.info("%s/ directory present  ✔", rel)
+        else:
+            log.info("Created %s/ directory  ✔", rel)
 
 
 # ---------------------------------------------------------------------------

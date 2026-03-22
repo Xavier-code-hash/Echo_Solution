@@ -68,6 +68,20 @@ call :die "Unknown argument: %~1  (use --help for usage)"
 :end_args
 
 :: ---------------------------------------------------------------------------
+:: Early runtime directory bootstrap
+:: ---------------------------------------------------------------------------
+:: Django's RotatingFileHandler tries to open logs\Echo_Solutions.log at
+:: import time.  If logs\ does not exist the server crashes immediately.
+:: We create all three runtime directories here — before the installer,
+:: before venv activation, before migrations — so the application always
+:: finds them.  mkdir /s /q is idempotent on Windows.
+::
+:: NOTE: This block intentionally runs BEFORE the banner so the directories
+:: exist even if the script aborts mid-startup.
+
+call :bootstrap_runtime_dirs
+
+:: ---------------------------------------------------------------------------
 :: Banner
 :: ---------------------------------------------------------------------------
 echo.
@@ -252,8 +266,44 @@ if !ERRORLEVEL! NEQ 0 (
 endlocal
 exit /b 0
 
+:bootstrap_runtime_dirs
+:: Create logs\, media\, and staticfiles\ silently if they do not exist.
+set "_BOOT_CREATED=0"
+
+if not exist "%SCRIPT_DIR%\logs\" (
+    mkdir "%SCRIPT_DIR%\logs" 2>nul
+    if !ERRORLEVEL! EQU 0 (
+        call :info "Bootstrap: created %SCRIPT_DIR%\logs"
+        set "_BOOT_CREATED=1"
+    ) else (
+        call :warn "Bootstrap: could not create %SCRIPT_DIR%\logs -- check permissions."
+    )
+)
+if not exist "%SCRIPT_DIR%\media\" (
+    mkdir "%SCRIPT_DIR%\media" 2>nul
+    if !ERRORLEVEL! EQU 0 (
+        call :info "Bootstrap: created %SCRIPT_DIR%\media"
+        set "_BOOT_CREATED=1"
+    ) else (
+        call :warn "Bootstrap: could not create %SCRIPT_DIR%\media -- check permissions."
+    )
+)
+if not exist "%SCRIPT_DIR%\staticfiles\" (
+    mkdir "%SCRIPT_DIR%\staticfiles" 2>nul
+    if !ERRORLEVEL! EQU 0 (
+        call :info "Bootstrap: created %SCRIPT_DIR%\staticfiles"
+        set "_BOOT_CREATED=1"
+    ) else (
+        call :warn "Bootstrap: could not create %SCRIPT_DIR%\staticfiles -- check permissions."
+    )
+)
+if "!_BOOT_CREATED!"=="0" (
+    call :detail "Bootstrap: all runtime directories already present."
+)
+goto :eof
+
 :: =============================================================================
-:: Subroutines
+:: Standard output helpers
 :: =============================================================================
 
 :section

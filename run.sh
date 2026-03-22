@@ -231,7 +231,36 @@ check_env_file() {
 }
 
 # ---------------------------------------------------------------------------
-# Runtime directory setup
+# Early runtime directory bootstrap
+# ---------------------------------------------------------------------------
+# The Django logging configuration uses a RotatingFileHandler that opens
+# logs/Echo_Solutions.log at import time.  If the logs/ directory does not
+# exist yet the server crashes before a single line of application code runs.
+# We create all three runtime directories here — before the installer, before
+# venv activation, before migrations — so the application always finds them.
+
+bootstrap_runtime_dirs() {
+    local -a dirs=("${LOG_DIR}" "${MEDIA_DIR}" "${STATIC_DIR}")
+    local dir any_created=0
+
+    for dir in "${dirs[@]}"; do
+        if [[ ! -d "${dir}" ]]; then
+            if mkdir -p "${dir}" 2>/dev/null; then
+                info "Bootstrap: created ${dir}"
+                (( any_created++ )) || true
+            else
+                warn "Bootstrap: could not create ${dir} — check filesystem permissions."
+            fi
+        fi
+    done
+
+    if (( any_created == 0 )); then
+        detail "Bootstrap: all runtime directories already present."
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# Runtime directory setup (section-level reporting, post-venv)
 # ---------------------------------------------------------------------------
 
 ensure_directories() {
@@ -239,6 +268,7 @@ ensure_directories() {
     local dir created=0
     for dir in "${LOG_DIR}" "${MEDIA_DIR}" "${STATIC_DIR}"; do
         if [[ ! -d "${dir}" ]]; then
+            # Should rarely fire — bootstrap_runtime_dirs() ran earlier.
             mkdir -p "${dir}"
             info "Created: ${dir}"
             (( created++ )) || true
@@ -333,6 +363,12 @@ trap _on_exit EXIT
 main() {
     cd "${SCRIPT_DIR}"
     parse_args "$@"
+
+    # Create runtime directories unconditionally before any other step.
+    # Django's RotatingFileHandler opens logs/ at import time — if the
+    # directory is absent the server crashes before printing a single line.
+    bootstrap_runtime_dirs
+
     print_banner
 
     assert_python
