@@ -2,11 +2,7 @@ import re
 
 
 def normalize_msisdn(phone: str) -> str:
-    """
-    Normalize Kenyan phone numbers to 254XXXXXXXXX.
-    Accepts formats: 07XXXXXXXX, 01XXXXXXXX, 7XXXXXXXX, 1XXXXXXXX, 254XXXXXXXXX.
-    Returns empty string if invalid.
-    """
+    """Normalize Kenyan phone numbers to 254XXXXXXXXX."""
     if not phone:
         return ""
     digits = re.sub(r"\D", "", phone)

@@ -5,7 +5,7 @@
 
 {% block extra_head %}
 {% if stripe_pk %}
-<script src="https://js.stripe.com/v3/"></script>
+<script src="https://js.stripe.com/v3/" defer></script>
 {% endif %}
 {% endblock %}
 
@@ -22,10 +22,8 @@
 
 <div style="display:grid;grid-template-columns:1fr 300px;gap:22px;max-width:900px">
 
-  <!-- ── Left: payment method forms ── -->
   <div>
 
-    <!-- Method selector -->
     <div class="card" style="margin-bottom:22px">
       <div class="card-head"><span class="card-title">Select Payment Method</span></div>
       <div class="card-body">
@@ -55,7 +53,6 @@
           </div>
           {% endif %}
 
-          <!-- Cash splits into two sub-options -->
           <div class="pay-method" data-gateway="cash">
             <div class="pay-method-ic">💵</div>
             <div class="pay-method-label">Cash</div>
@@ -72,7 +69,7 @@
       </div>
     </div>
 
-    <!-- ── M-Pesa ── -->
+    <!-- M-Pesa -->
     <div id="pay-mpesa" class="pay-section" hidden>
       <div class="card">
         <div class="card-head">
@@ -102,7 +99,7 @@
       </div>
     </div>
 
-    <!-- ── Stripe ── -->
+    <!-- Stripe Card -->
     <div id="pay-stripe" class="pay-section" hidden>
       <div class="card">
         <div class="card-head">
@@ -140,7 +137,7 @@
       </div>
     </div>
 
-    <!-- ── PayPal ── -->
+    <!-- PayPal -->
     <div id="pay-paypal" class="pay-section" hidden>
       <div class="card">
         <div class="card-head">
@@ -163,10 +160,7 @@
       </div>
     </div>
 
-    <!-- ══════════════════════════════════════════════
-         PHYSICAL CASH
-         Records payment immediately, issues receipt.
-         ══════════════════════════════════════════════ -->
+    <!-- Cash -->
     <div id="pay-cash" class="pay-section" hidden>
       <div class="card">
         <div class="card-head">
@@ -174,7 +168,6 @@
         </div>
         <div class="card-body">
 
-          <!-- QR scanner toggle -->
           <div style="display:flex;align-items:center;justify-content:space-between;
                       margin-bottom:18px;padding:12px 14px;
                       background:var(--slate-50);border-radius:var(--r8);
@@ -191,13 +184,11 @@
             </button>
           </div>
 
-          <!-- QR camera preview (hidden until activated) -->
           <div id="cash-qr-area" hidden>
             <div style="position:relative;border-radius:var(--r12);overflow:hidden;
                         margin-bottom:14px;border:2px solid var(--brass)">
               <video id="cash-qr-video" autoplay playsinline muted
                      style="width:100%;display:block;max-height:240px;object-fit:cover"></video>
-              <!-- Scanning reticle overlay -->
               <div style="position:absolute;inset:0;display:flex;align-items:center;
                           justify-content:center;pointer-events:none">
                 <div style="width:160px;height:160px;border:3px solid var(--brass);
@@ -261,11 +252,7 @@
       </div>
     </div>
 
-    <!-- ══════════════════════════════════════════════
-         BANK TRANSFER
-         Owner enters bank confirmation code/details.
-         QR scanner can auto-fill from bank slip QR.
-         ══════════════════════════════════════════════ -->
+    <!-- Bank Transfer -->
     <div id="pay-bank" class="pay-section" hidden>
       <div class="card">
         <div class="card-head">
@@ -273,7 +260,6 @@
         </div>
         <div class="card-body">
 
-          <!-- QR scanner toggle for bank -->
           <div style="display:flex;align-items:center;justify-content:space-between;
                       margin-bottom:18px;padding:12px 14px;
                       background:var(--slate-50);border-radius:var(--r8);
@@ -290,7 +276,6 @@
             </button>
           </div>
 
-          <!-- Bank QR camera preview -->
           <div id="bank-qr-area" hidden>
             <div style="position:relative;border-radius:var(--r12);overflow:hidden;
                         margin-bottom:14px;border:2px solid var(--brass)">
@@ -386,15 +371,14 @@
       </div>
     </div>
 
-    <!-- No method selected yet -->
     <div id="no-method-msg" style="text-align:center;padding:36px;color:var(--txt3)">
       <i class="fas fa-arrow-up" style="font-size:2rem;margin-bottom:10px;display:block"></i>
       Select a payment method above to continue
     </div>
 
-  </div><!-- /left -->
+  </div>
 
-  <!-- ── Right: invoice summary ── -->
+  <!-- Invoice summary sidebar -->
   <div>
     <div class="card">
       <div class="card-head">
@@ -443,67 +427,55 @@
     </div>
   </div>
 
-</div><!-- /grid -->
+</div>
 
-
-<!-- ══════════════════════════════════════════════════════════
-     JAVASCRIPT
-     1. Method selector
-     2. QR scanner (jsQR via CDN)
-     3. Stripe 3-step flow
-     ══════════════════════════════════════════════════════════ -->
 
 <script>
-/* ── 1. Payment method selector ── */
 (function () {
   var methods  = document.querySelectorAll(".pay-method");
   var sections = document.querySelectorAll(".pay-section");
   var noMsg    = document.getElementById("no-method-msg");
 
+  /* stripeCardEl is set by the Stripe init block below (same closure via window.
+     Using a module-level flag here keeps mount lazy — only on first tab selection. */
+  var cardMounted = false;
+
   methods.forEach(function (btn) {
     btn.addEventListener("click", function () {
       methods.forEach(function (b) { b.classList.remove("active", "sel", "pay-method--active"); });
       btn.classList.add("active", "sel", "pay-method--active");
-      var gw = btn.dataset.gateway;
       sections.forEach(function (s) { s.hidden = true; });
-      var target = document.getElementById("pay-" + gw);
+      var target = document.getElementById("pay-" + btn.dataset.gateway);
       if (target) target.hidden = false;
-      noMsg.style.display = "none";
+      if (noMsg) noMsg.style.display = "none";
+
+      if (btn.dataset.gateway === "stripe" && !cardMounted && window._stripeCardEl) {
+        window._stripeCardEl.mount("#card-element");
+        cardMounted = true;
+      }
     });
   });
 }());
 </script>
 
-<!-- jsQR library for QR code decoding from camera frames -->
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 
 <script>
-/* ── 2. QR Scanner ──
-   Each payment section (cash / bank) has its own <video> element.
-   toggleQrScanner(prefix) starts the camera; stopQrScanner(prefix) stops it.
-   Decoded text is parsed as JSON or key=value pairs and mapped to form fields.
-*/
 (function () {
-  var scanners = {};   /* prefix → { stream, animFrame } */
+  var scanners = {};
 
-  /* Map decoded QR text into the form fields for the given prefix */
   function fillFromQr(prefix, text) {
     var data = {};
 
-    /* Try JSON first (e.g. {"bank_code":"EQB001","bank_name":"Equity"}) */
     try { data = JSON.parse(text); } catch (_) {}
 
-    /* Fall back: key=value pairs separated by newlines or semicolons */
     if (!Object.keys(data).length) {
       text.split(/[\n;]/).forEach(function (pair) {
         var idx = pair.indexOf("=");
-        if (idx > 0) {
-          data[pair.slice(0, idx).trim()] = pair.slice(idx + 1).trim();
-        }
+        if (idx > 0) data[pair.slice(0, idx).trim()] = pair.slice(idx + 1).trim();
       });
     }
 
-    /* ── Cash field mapping ── */
     if (prefix === "cash") {
       if (data.reference)   setField("cash_reference",   data.reference);
       if (data.received_by) setField("cash_received_by", data.received_by);
@@ -511,7 +483,6 @@
       showQrResult("cash", "Fields filled from QR code.");
     }
 
-    /* ── Bank field mapping ── */
     if (prefix === "bank") {
       if (data.bank_name)   setField("bank_name",   data.bank_name);
       if (data.bank_branch) setField("bank_branch", data.bank_branch);
@@ -528,7 +499,6 @@
       showQrResult("bank", "Bank details filled from QR code.");
     }
 
-    /* Stop scanning after a successful decode */
     stopQrScanner(prefix);
   }
 
@@ -544,17 +514,13 @@
     if (msgEl)    msgEl.textContent = msg;
   }
 
-  /* Start camera and decode loop */
   window.toggleQrScanner = function (prefix) {
     var area     = document.getElementById(prefix + "-qr-area");
     var video    = document.getElementById(prefix + "-qr-video");
     var resultEl = document.getElementById(prefix + "-qr-result");
 
     if (!area || !video) return;
-
-    /* Hide previous result */
     if (resultEl) resultEl.style.display = "none";
-
     area.hidden = false;
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -565,9 +531,8 @@
     navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
       .then(function (stream) {
         video.srcObject = stream;
-
-        var canvas  = document.createElement("canvas");
-        var ctx     = canvas.getContext("2d");
+        var canvas = document.createElement("canvas");
+        var ctx    = canvas.getContext("2d");
 
         function tick() {
           if (video.readyState === video.HAVE_ENOUGH_DATA) {
@@ -580,7 +545,7 @@
             });
             if (code && code.data) {
               fillFromQr(prefix, code.data);
-              return; /* stop loop after successful scan */
+              return;
             }
           }
           scanners[prefix] = scanners[prefix] || {};
@@ -595,7 +560,6 @@
       });
   };
 
-  /* Stop camera stream and hide preview */
   window.stopQrScanner = function (prefix) {
     var area  = document.getElementById(prefix + "-qr-area");
     var video = document.getElementById(prefix + "-qr-video");
@@ -613,7 +577,6 @@
 </script>
 
 {% if stripe_pk %}
-<!-- ── 3. Stripe 3-step flow ── -->
 <script>
 (function () {
   "use strict";
@@ -623,9 +586,9 @@
   var CONFIRM_URL = "{% url 'payments:stripe-confirm' %}";
   var DETAIL_URL  = "{% url 'payments:invoice-detail' invoice.pk %}";
 
-  var stripe   = Stripe("{{ stripe_pk }}");
-  var elements = stripe.elements();
-  var cardEl   = elements.create("card", {
+  var stripe      = Stripe("{{ stripe_pk }}");
+  var elements    = stripe.elements();
+  var stripeCardEl = elements.create("card", {
     style: {
       base: {
         fontFamily: "'Plus Jakarta Sans', sans-serif",
@@ -634,9 +597,12 @@
       },
     },
   });
-  cardEl.mount("#card-element");
 
-  cardEl.on("change", function (e) {
+  /* Expose the card element so the method selector can mount it on first tab click.
+     Prefixed with _ to signal it's an internal bridge, not a public API. */
+  window._stripeCardEl = stripeCardEl;
+
+  stripeCardEl.on("change", function (e) {
     setError("stripe-card-error", e.error ? e.error.message : null);
   });
 
@@ -654,9 +620,10 @@
     btn.disabled  = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + label;
   }
+
   function resetBtn() {
-    btn.disabled  = false;
-    btn.innerHTML = originalBtnHTML;
+    btn.disabled      = false;
+    btn.innerHTML     = originalBtnHTML;
     btn.style.display = "block";
   }
 
@@ -665,7 +632,6 @@
     setError("stripe-card-error",   null);
     setBusy("Initialising…");
 
-    /* Step 1 — create PaymentIntent */
     var initResp, initData;
     try {
       initResp = await fetch(PAY_URL, {
@@ -684,12 +650,11 @@
       resetBtn(); return;
     }
 
-    /* Step 2 — confirm card */
     setBusy("Processing card…");
     var confirmResult;
     try {
       confirmResult = await stripe.confirmCardPayment(initData.client_secret, {
-        payment_method: { card: cardEl },
+        payment_method: { card: stripeCardEl },
       });
     } catch (_) {
       setError("stripe-card-error", "Stripe error — please try again.");
@@ -700,12 +665,12 @@
       setError("stripe-card-error", confirmResult.error.message);
       resetBtn(); return;
     }
+
     if (confirmResult.paymentIntent.status !== "succeeded") {
       setError("stripe-card-error", "Payment did not complete. Please try again.");
       resetBtn(); return;
     }
 
-    /* Step 3 — tell Django to settle and issue receipt */
     setBusy("Confirming…");
     document.getElementById("stripe-success").style.display = "block";
     btn.style.display = "none";
@@ -736,6 +701,7 @@
       resetBtn();
     }
   });
+
 }());
 </script>
 {% endif %}

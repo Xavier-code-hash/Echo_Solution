@@ -30,9 +30,7 @@ class ReceiptAdmin(admin.ModelAdmin):
     ordering = ("-issued_at",)
 
     def has_add_permission(self, request):
-        # Receipts are auto-generated — never created manually via admin
         return False
 
     def has_delete_permission(self, request, obj=None):
-        # Receipts are immutable audit records
         return False

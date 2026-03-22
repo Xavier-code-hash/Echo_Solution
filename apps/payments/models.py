@@ -1,5 +1,5 @@
 import uuid
-from django.db import models
+from django.db import models, transaction
 from django.conf import settings
 
 
@@ -33,11 +33,13 @@ class Invoice(models.Model):
         ordering = ["-invoice_date"]
 
     def save(self, *args, **kwargs):
-        self.total_amount = self.rent_amount + self.late_fee + self.other_charges - self.discount
+        if not kwargs.get("update_fields"):
+            self.total_amount = self.rent_amount + self.late_fee + self.other_charges - self.discount
         if not self.invoice_number:
-            last = Invoice.objects.order_by("-created_at").first()
-            n    = (int(last.invoice_number.split("-")[1]) + 1) if last else 1
-            self.invoice_number = f"INV-{n:06d}"
+            with transaction.atomic():
+                last = Invoice.objects.select_for_update().order_by("-created_at").first()
+                n = (int(last.invoice_number.split("-")[1]) + 1) if last else 1
+                self.invoice_number = f"INV-{n:06d}"
         super().save(*args, **kwargs)
 
     @property
@@ -103,35 +105,15 @@ class MpesaCallbackLog(models.Model):
 
 
 class Receipt(models.Model):
-    """
-    Immutable payment receipt — one per completed Payment.
-
-    The OneToOneField on `payment` is the DB-level duplicate guard: a second
-    INSERT for the same payment raises IntegrityError, caught by issue_receipt()
-    which then returns the already-existing receipt instead of crashing.
-
-    receipt_number  RCP-000001, RCP-000002 …  Sequential, never reused.
-    gateway_ref     The external proof-of-payment reference (M-Pesa receipt /
-                    Stripe PI ID / PayPal order ID / cash note).
-    """
-
     id             = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     receipt_number = models.CharField(max_length=30, unique=True, editable=False)
-
-    payment  = models.OneToOneField(
-        Payment, on_delete=models.PROTECT, related_name="receipt"
-    )
-    invoice  = models.ForeignKey(
-        Invoice, on_delete=models.PROTECT, related_name="receipts"
-    )
-    tenant   = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="receipts"
-    )
-
-    amount      = models.DecimalField(max_digits=10, decimal_places=2)
-    gateway     = models.CharField(max_length=10)
-    gateway_ref = models.CharField(max_length=255, blank=True)
-    issued_at   = models.DateTimeField(auto_now_add=True)
+    payment        = models.OneToOneField(Payment, on_delete=models.PROTECT, related_name="receipt")
+    invoice        = models.ForeignKey(Invoice, on_delete=models.PROTECT, related_name="receipts")
+    tenant         = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="receipts")
+    amount         = models.DecimalField(max_digits=10, decimal_places=2)
+    gateway        = models.CharField(max_length=10)
+    gateway_ref    = models.CharField(max_length=255, blank=True)
+    issued_at      = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["-issued_at"]

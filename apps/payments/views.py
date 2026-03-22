@@ -1,16 +1,7 @@
-"""
-apps/payments/views.py
-
-Receipt auto-generation happens for:
-  - Physical cash  → immediately on form submission
-  - Bank transfer  → immediately on form submission (owner verifies before submitting)
-  - Stripe         → on stripe_confirm (client) and stripe_webhook (server)
-  - M-Pesa         → on mpesa_callback from Safaricom
-  - PayPal         → on paypal_success after order capture
-"""
 import json
 import logging
 from datetime import date
+from decimal import Decimal, InvalidOperation
 
 from django.conf import settings
 from django.contrib import messages
@@ -30,10 +21,7 @@ from apps.payments.utils import normalize_msisdn
 log = logging.getLogger("apps.payments")
 
 
-# ── Shared helpers ────────────────────────────────────────────────────────────
-
 def _settle_invoice(invoice: Invoice) -> None:
-    """Recalculate amount_paid and update invoice status after a completed payment."""
     from django.db.models import Sum
     paid = invoice.payments.filter(status="completed").aggregate(t=Sum("amount"))["t"] or 0
     invoice.amount_paid = paid
@@ -46,7 +34,6 @@ def _settle_invoice(invoice: Invoice) -> None:
 
 
 def _issue_and_notify(payment: Payment) -> None:
-    """Issue receipt and send email notification. Never raises — errors are logged only."""
     try:
         issue_receipt(payment)
     except Exception as exc:
@@ -57,8 +44,6 @@ def _issue_and_notify(payment: Payment) -> None:
     except Exception as exc:
         log.error("Payment notification failed for payment %s: %s", payment.pk, exc)
 
-
-# ── Invoice views ─────────────────────────────────────────────────────────────
 
 @method_decorator(login_required, name="dispatch")
 class InvoiceListView(View):
@@ -95,11 +80,13 @@ class InvoiceCreateView(View):
         if lease_id:
             from apps.tenants.models import Lease
             try:
-                lease = Lease.objects.get(pk=lease_id)
+                lease   = Lease.objects.get(pk=lease_id)
                 initial = {
-                    "lease": lease, "rent_amount": lease.monthly_rent,
-                    "late_fee": lease.late_fee, "invoice_date": timezone.now().date(),
-                    "due_date": timezone.now().date().replace(day=lease.rent_due_day),
+                    "lease":        lease,
+                    "rent_amount":  lease.monthly_rent,
+                    "late_fee":     lease.late_fee,
+                    "invoice_date": timezone.now().date(),
+                    "due_date":     timezone.now().date().replace(day=lease.rent_due_day),
                 }
             except Exception:
                 pass
@@ -147,8 +134,6 @@ class InvoiceDetailView(View):
         return redirect("payments:invoice-detail", pk=pk)
 
 
-# ── Pay view ──────────────────────────────────────────────────────────────────
-
 @method_decorator(login_required, name="dispatch")
 class PayView(View):
     def get(self, request, pk):
@@ -177,8 +162,6 @@ class PayView(View):
             return redirect("payments:pay", pk=pk)
         return handler(request, invoice)
 
-    # ── Stripe ────────────────────────────────────────────────────────────────
-
     def _stripe_init(self, request, invoice):
         import stripe
         stripe.api_key = settings.STRIPE_SECRET_KEY
@@ -199,18 +182,11 @@ class PayView(View):
             log.error("Stripe init error: %s", exc)
             return JsonResponse({"ok": False, "error": str(exc)})
 
-    # ── M-Pesa ────────────────────────────────────────────────────────────────
-
     def _mpesa_push(self, request, invoice):
         phone = normalize_msisdn(request.POST.get("phone", ""))
         if not phone:
             messages.error(request, "Invalid phone number.")
             return redirect("payments:pay", pk=invoice.pk)
-        payment = Payment.objects.create(
-            invoice=invoice, tenant=invoice.lease.tenant,
-            amount=invoice.balance_due, gateway=Payment.Gateway.MPESA,
-            status=Payment.Status.PENDING, mpesa_phone=phone,
-        )
         try:
             from apps.payments.services import mpesa as mpesa_svc
             checkout_id = mpesa_svc.stk_push(
@@ -218,16 +194,18 @@ class PayView(View):
                 account_ref=invoice.invoice_number,
                 description=f"Rent {invoice.invoice_number}",
             )
-            payment.mpesa_checkout = checkout_id
-            payment.save(update_fields=["mpesa_checkout"])
+            Payment.objects.create(
+                invoice=invoice, tenant=invoice.lease.tenant,
+                amount=invoice.balance_due, gateway=Payment.Gateway.MPESA,
+                status=Payment.Status.PENDING,
+                mpesa_phone=phone, mpesa_checkout=checkout_id,
+            )
             log.info("M-Pesa STK → %s, checkout=%s", phone, checkout_id)
             messages.info(request, "M-Pesa prompt sent — enter your PIN to complete.")
         except Exception as exc:
             log.error("M-Pesa STK error: %s", exc)
             messages.error(request, f"M-Pesa error: {exc}")
         return redirect("payments:invoice-detail", pk=invoice.pk)
-
-    # ── PayPal ────────────────────────────────────────────────────────────────
 
     def _paypal_redirect(self, request, invoice):
         try:
@@ -247,13 +225,7 @@ class PayView(View):
             messages.error(request, f"PayPal error: {exc}")
             return redirect("payments:pay", pk=invoice.pk)
 
-    # ── Physical cash ─────────────────────────────────────────────────────────
-
     def _cash_payment(self, request, invoice):
-        """
-        Owner confirms physical cash was handed over.
-        Payment is marked COMPLETED immediately and receipt issued on the spot.
-        """
         reference   = request.POST.get("reference", "").strip()
         received_by = request.POST.get("received_by", "").strip()
         notes       = request.POST.get("notes", "").strip()
@@ -265,20 +237,13 @@ class PayView(View):
         full_reference = " | ".join(ref_parts) if ref_parts else "Physical cash"
 
         payment = Payment.objects.create(
-            invoice=invoice,
-            tenant=invoice.lease.tenant,
-            amount=invoice.balance_due,
-            gateway=Payment.Gateway.CASH,
-            status=Payment.Status.COMPLETED,
-            reference=full_reference,
+            invoice=invoice, tenant=invoice.lease.tenant,
+            amount=invoice.balance_due, gateway=Payment.Gateway.CASH,
+            status=Payment.Status.COMPLETED, reference=full_reference,
         )
         _settle_invoice(invoice)
         _issue_and_notify(payment)
-
-        log.info(
-            "Cash payment recorded — invoice %s, KES %s",
-            invoice.invoice_number, payment.amount,
-        )
+        log.info("Cash payment recorded — invoice %s, KES %s", invoice.invoice_number, payment.amount)
         messages.success(
             request,
             f"Cash payment of KES {payment.amount:,.0f} recorded. "
@@ -286,14 +251,7 @@ class PayView(View):
         )
         return redirect("payments:invoice-detail", pk=invoice.pk)
 
-    # ── Bank transfer ─────────────────────────────────────────────────────────
-
     def _bank_payment(self, request, invoice):
-        """
-        Owner enters bank transfer confirmation details (or scans QR from slip).
-        Receipt is issued immediately — owner is responsible for verifying the
-        transfer before submitting this form.
-        """
         bank_name   = request.POST.get("bank_name", "").strip()
         bank_branch = request.POST.get("bank_branch", "").strip()
         bank_code   = request.POST.get("bank_code", "").strip()
@@ -306,7 +264,6 @@ class PayView(View):
             messages.error(request, "Bank name and transaction code are required.")
             return redirect("payments:pay", pk=invoice.pk)
 
-        # Build a structured reference that will appear on the receipt PDF
         ref_parts = [bank_name]
         if bank_branch: ref_parts.append(f"({bank_branch})")
         ref_parts.append(f"| Code: {bank_code}")
@@ -316,21 +273,17 @@ class PayView(View):
         full_reference = " ".join(ref_parts)
 
         try:
-            amount = abs(float(bank_amount)) if bank_amount else float(invoice.balance_due)
-        except ValueError:
-            amount = float(invoice.balance_due)
+            amount = abs(Decimal(bank_amount)) if bank_amount else invoice.balance_due
+        except InvalidOperation:
+            amount = invoice.balance_due
 
         payment = Payment.objects.create(
-            invoice=invoice,
-            tenant=invoice.lease.tenant,
-            amount=amount,
-            gateway=Payment.Gateway.BANK,
-            status=Payment.Status.COMPLETED,
-            reference=full_reference,
+            invoice=invoice, tenant=invoice.lease.tenant,
+            amount=amount, gateway=Payment.Gateway.BANK,
+            status=Payment.Status.COMPLETED, reference=full_reference,
         )
         _settle_invoice(invoice)
         _issue_and_notify(payment)
-
         log.info(
             "Bank payment recorded — invoice %s, KES %s, code: %s",
             invoice.invoice_number, payment.amount, bank_code,
@@ -342,8 +295,6 @@ class PayView(View):
         )
         return redirect("payments:invoice-detail", pk=invoice.pk)
 
-
-# ── Stripe webhook ────────────────────────────────────────────────────────────
 
 @csrf_exempt
 def stripe_webhook(request):
@@ -375,8 +326,6 @@ def stripe_webhook(request):
     return HttpResponse(status=200)
 
 
-# ── Stripe client-side confirm ────────────────────────────────────────────────
-
 @login_required
 def stripe_confirm(request):
     if request.method != "POST":
@@ -397,8 +346,6 @@ def stripe_confirm(request):
         log.error("Stripe confirm error: %s", exc)
         return JsonResponse({"ok": False, "error": str(exc)})
 
-
-# ── M-Pesa callback ───────────────────────────────────────────────────────────
 
 @csrf_exempt
 def mpesa_callback(request):
@@ -431,7 +378,7 @@ def mpesa_callback(request):
             item["Name"]: item.get("Value")
             for item in stk.get("CallbackMetadata", {}).get("Item", [])
         }
-        mpesa_ref = str(items.get("MpesaReceiptNumber", ""))
+        mpesa_ref         = str(items.get("MpesaReceiptNumber", ""))
         payment.status    = Payment.Status.COMPLETED
         payment.mpesa_ref = mpesa_ref
         payment.save(update_fields=["status", "mpesa_ref"])
@@ -445,8 +392,6 @@ def mpesa_callback(request):
 
     return JsonResponse({"ResultCode": 0, "ResultDesc": "Accepted"})
 
-
-# ── M-Pesa retry ─────────────────────────────────────────────────────────────
 
 @login_required
 def mpesa_retry(request, pk):
@@ -468,8 +413,6 @@ def mpesa_retry(request, pk):
         messages.error(request, f"Retry failed: {exc}")
     return redirect("payments:invoice-detail", pk=payment.invoice.pk)
 
-
-# ── PayPal ────────────────────────────────────────────────────────────────────
 
 @login_required
 def paypal_success(request):
@@ -496,10 +439,11 @@ def paypal_success(request):
 @login_required
 def paypal_cancel(request):
     messages.warning(request, "PayPal payment cancelled.")
-    return redirect("payments:invoice-detail", pk=request.GET.get("invoice"))
+    invoice_pk = request.GET.get("invoice")
+    if not invoice_pk:
+        return redirect("payments:list")
+    return redirect("payments:invoice-detail", pk=invoice_pk)
 
-
-# ── Receipts ──────────────────────────────────────────────────────────────────
 
 @login_required
 def receipt_list(request):
@@ -527,7 +471,7 @@ def receipt_download(request, pk):
         messages.error(request, "Permission denied.")
         return redirect("payments:receipt-list")
     from apps.payments.services.receipt_pdf import build_receipt_pdf
-    pdf = build_receipt_pdf(receipt)
+    pdf      = build_receipt_pdf(receipt)
     response = HttpResponse(pdf, content_type="application/pdf")
     response["Content-Disposition"] = (
         f'attachment; filename="receipt_{receipt.receipt_number}.pdf"'
