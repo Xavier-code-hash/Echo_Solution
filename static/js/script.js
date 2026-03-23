@@ -1,8 +1,7 @@
 "use strict";
 
 document.addEventListener("DOMContentLoaded", function () {
-
-  var root  = document.documentElement;
+  var root = document.documentElement;
   var saved = localStorage.getItem("theme") || "light";
   root.setAttribute("data-theme", saved);
 
@@ -20,9 +19,8 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-
-  var sidebar   = document.getElementById("sidebar");
-  var overlay   = document.getElementById("sbOverlay");
+  var sidebar = document.getElementById("sidebar");
+  var overlay = document.getElementById("sbOverlay");
   var toggleBtn = document.getElementById("sidebarToggle");
 
   function isMobile() { return window.innerWidth <= 768; }
@@ -126,29 +124,26 @@ document.addEventListener("DOMContentLoaded", function () {
     onScroll();
   }
 
-
   var clockEl = document.querySelector(".tb-clock");
   if (clockEl) {
     var userTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
     function tickClock() {
-      var now     = new Date();
+      var now = new Date();
       var timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: userTZ });
       var dateStr = now.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric", timeZone: userTZ });
-      clockEl.innerHTML = '<i class="far fa-clock"></i> ' + timeStr +
-                          ' <span style="opacity:.5;font-size:.72rem">' + dateStr + "</span>";
+      clockEl.innerHTML = '<i class="far fa-clock"></i> ' + timeStr + ' <span style="opacity:.5;font-size:.72rem">' + dateStr + "</span>";
     }
     tickClock();
     setInterval(tickClock, 1000);
   }
 
-
   function showToast(msg, type) {
     type = type || "info";
     var icons = {
       success: "fa-check-circle",
-      error:   "fa-exclamation-circle",
+      error: "fa-exclamation-circle",
       warning: "fa-triangle-exclamation",
-      info:    "fa-info-circle",
+      info: "fa-info-circle",
     };
     var wrap = document.querySelector(".toast-wrap");
     if (!wrap) {
@@ -158,15 +153,13 @@ document.addEventListener("DOMContentLoaded", function () {
     }
     var t = document.createElement("div");
     t.className = "toast toast-" + type;
-    t.innerHTML = '<i class="toast-ic fas ' + (icons[type] || icons.info) + '"></i>' +
-                  '<span class="toast-msg">' + msg + '</span>' +
-                  '<button class="toast-close" aria-label="Close">&times;</button>';
+    t.innerHTML = '<i class="toast-ic fas ' + (icons[type] || icons.info) + '"></i>' + '<span class="toast-msg">' + msg + '</span>' + '<button class="toast-close" aria-label="Close">&times;</button>';
     wrap.appendChild(t);
     t.querySelector(".toast-close").addEventListener("click", function () { t.remove(); });
     setTimeout(function () {
       t.style.transition = "opacity .3s,transform .3s";
-      t.style.opacity    = "0";
-      t.style.transform  = "translateX(14px)";
+      t.style.opacity = "0";
+      t.style.transform = "translateX(14px)";
       setTimeout(function () { t.remove(); }, 330);
     }, 5000);
   }
@@ -174,7 +167,6 @@ document.addEventListener("DOMContentLoaded", function () {
   document.querySelectorAll("[data-toast]").forEach(function (el) {
     showToast(el.dataset.toastMsg, el.dataset.toast);
   });
-
 
   document.querySelectorAll("[data-pw-toggle]").forEach(function (btn) {
     var target = document.getElementById(btn.dataset.pwToggle);
@@ -187,46 +179,40 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-
-
-
-
   document.querySelectorAll("[data-confirm]").forEach(function (el) {
     el.addEventListener("click", function (e) {
       if (!confirm(el.dataset.confirm || "Are you sure?")) e.preventDefault();
     });
   });
 
-
   document.querySelectorAll(".auto-dismiss").forEach(function (el) {
     setTimeout(function () {
       el.style.transition = "opacity .4s";
-      el.style.opacity    = "0";
+      el.style.opacity = "0";
     }, 4000);
   });
 
-
   function applyChartDefaults(isDark) {
     if (typeof Chart === "undefined") return;
-    var gridColor  = isDark ? "rgba(255,255,255,.06)" : "rgba(0,0,0,.06)";
-    var axisColor  = isDark ? "rgba(255,255,255,.35)" : "rgba(0,0,0,.35)";
+    var gridColor = isDark ? "rgba(255,255,255,.06)" : "rgba(0,0,0,.06)";
+    var axisColor = isDark ? "rgba(255,255,255,.35)" : "rgba(0,0,0,.35)";
     var fontFamily = "'Plus Jakarta Sans',system-ui,sans-serif";
-    Chart.defaults.font.family               = fontFamily;
-    Chart.defaults.font.size                 = 12;
-    Chart.defaults.color                     = axisColor;
-    Chart.defaults.borderColor               = gridColor;
-    Chart.defaults.plugins.legend.display    = false;
-    Chart.defaults.plugins.tooltip.enabled   = false;
-    Chart.defaults.animation.duration        = 600;
-    Chart.defaults.animation.easing          = "easeOutQuart";
-    Chart.defaults.responsive                = true;
-    Chart.defaults.maintainAspectRatio       = false;
+    Chart.defaults.font.family = fontFamily;
+    Chart.defaults.font.size = 12;
+    Chart.defaults.color = axisColor;
+    Chart.defaults.borderColor = gridColor;
+    Chart.defaults.plugins.legend.display = false;
+    Chart.defaults.plugins.tooltip.enabled = false;
+    Chart.defaults.animation.duration = 600;
+    Chart.defaults.animation.easing = "easeOutQuart";
+    Chart.defaults.responsive = true;
+    Chart.defaults.maintainAspectRatio = false;
   }
 
   function buildTooltip(context) {
-    var chart     = context.chart;
-    var canvas    = chart.canvas;
-    var tooltip   = context.tooltip;
+    var chart = context.chart;
+    var canvas = chart.canvas;
+    var tooltip = context.tooltip;
     var tooltipEl = chart._customTooltip;
     if (!tooltipEl) {
       tooltipEl = document.createElement("div");
@@ -237,20 +223,16 @@ document.addEventListener("DOMContentLoaded", function () {
     }
     if (tooltip.opacity === 0) { tooltipEl.style.opacity = "0"; return; }
     var title = tooltip.title && tooltip.title[0] ? tooltip.title[0] : "";
-    var rows  = tooltip.dataPoints.map(function (dp) {
+    var rows = tooltip.dataPoints.map(function (dp) {
       var color = dp.dataset.borderColor || dp.dataset.backgroundColor || "#c8922a";
       var label = dp.dataset.label || "";
-      var val   = dp.formattedValue;
-      return '<div class="chart-tooltip-row">' +
-             '<div class="chart-tooltip-swatch" style="background:' + color + '"></div>' +
-             '<span class="chart-tooltip-label">' + label + '</span>' +
-             '<span class="chart-tooltip-val">' + val + '</span>' +
-             '</div>';
+      var val = dp.formattedValue;
+      return '<div class="chart-tooltip-row">' + '<div class="chart-tooltip-swatch" style="background:' + color + '"></div>' + '<span class="chart-tooltip-label">' + label + '</span>' + '<span class="chart-tooltip-val">' + val + '</span>' + '</div>';
     }).join("");
-    tooltipEl.innerHTML       = (title ? '<div class="chart-tooltip-title">' + title + '</div>' : "") + rows;
-    tooltipEl.style.opacity   = "1";
-    tooltipEl.style.left      = tooltip.caretX + "px";
-    tooltipEl.style.top       = tooltip.caretY + "px";
+    tooltipEl.innerHTML = (title ? '<div class="chart-tooltip-title">' + title + '</div>' : "") + rows;
+    tooltipEl.style.opacity = "1";
+    tooltipEl.style.left = tooltip.caretX + "px";
+    tooltipEl.style.top = tooltip.caretY + "px";
     tooltipEl.style.transform = "translate(-50%, -110%)";
   }
 
@@ -263,10 +245,7 @@ document.addEventListener("DOMContentLoaded", function () {
     Object.values(CHART_REGISTRY).forEach(function (ch) { ch.update(); });
   }
 
-  var PALETTE = [
-    "#c8922a", "#2563eb", "#16a34a", "#d97706",
-    "#7c3aed", "#0891b2", "#dc2626", "#059669",
-  ];
+  var PALETTE = ["#c8922a", "#2563eb", "#16a34a", "#d97706", "#7c3aed", "#0891b2", "#dc2626", "#059669"];
 
   function makeChart(ctx, config) {
     var isDark = document.documentElement.getAttribute("data-theme") === "dark";
@@ -297,8 +276,8 @@ document.addEventListener("DOMContentLoaded", function () {
     if (typeof Chart !== "undefined") {
       initAllCharts();
     } else {
-      var script   = document.createElement("script");
-      script.src   = "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js";
+      var script = document.createElement("script");
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js";
       script.onload = initAllCharts;
       document.head.appendChild(script);
     }
@@ -306,27 +285,25 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function initAllCharts() {
     document.querySelectorAll("[data-chart]").forEach(function (canvas) {
-      var type    = canvas.dataset.chart;
+      var type = canvas.dataset.chart;
       var rawData = canvas.dataset.chartData;
-      var labels  = canvas.dataset.chartLabels;
+      var labels = canvas.dataset.chartLabels;
       if (!rawData) return;
       try {
-        var data    = JSON.parse(rawData);
-        var lblArr  = labels ? JSON.parse(labels) : [];
+        var data = JSON.parse(rawData);
+        var lblArr = labels ? JSON.parse(labels) : [];
         var isMulti = Array.isArray(data[0]);
         var datasets;
         if (type === "pie" || type === "doughnut") {
           datasets = [{
-            data:            data,
+            data: data,
             backgroundColor: PALETTE.slice(0, data.length).map(function (c) { return c + "cc"; }),
-            borderColor:     PALETTE.slice(0, data.length),
-            borderWidth:     2,
-            hoverOffset:     6,
+            borderColor: PALETTE.slice(0, data.length),
+            borderWidth: 2,
+            hoverOffset: 6,
           }];
         } else if (isMulti) {
-          var seriesLabels = canvas.dataset.chartSeries
-            ? JSON.parse(canvas.dataset.chartSeries)
-            : data.map(function (_, i) { return "Series " + (i + 1); });
+          var seriesLabels = canvas.dataset.chartSeries ? JSON.parse(canvas.dataset.chartSeries) : data.map(function (_, i) { return "Series " + (i + 1); });
           datasets = data.map(function (series, i) {
             return buildDataset(type, series, seriesLabels[i], PALETTE[i % PALETTE.length]);
           });
@@ -335,7 +312,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
         makeChart(canvas.getContext("2d"), buildConfig(type, lblArr, datasets, canvas));
       } catch (e) {
-        console.warn("Echo chart init error on #" + canvas.id + ":", e);
+        console.warn("Chart init error on #" + canvas.id + ":", e);
       }
     });
   }
@@ -358,28 +335,28 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function buildConfig(type, labels, datasets, canvas) {
-    var isDark      = document.documentElement.getAttribute("data-theme") === "dark";
-    var gridColor   = isDark ? "rgba(255,255,255,.06)" : "rgba(0,0,0,.06)";
-    var axisColor   = isDark ? "rgba(255,255,255,.35)" : "rgba(0,0,0,.35)";
-    var isCurrency  = canvas.dataset.chartCurrency === "true";
+    var isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    var gridColor = isDark ? "rgba(255,255,255,.06)" : "rgba(0,0,0,.06)";
+    var axisColor = isDark ? "rgba(255,255,255,.35)" : "rgba(0,0,0,.35)";
+    var isCurrency = canvas.dataset.chartCurrency === "true";
     var config = {
       type: type,
       data: { labels: labels, datasets: datasets },
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend:  { display: false },
+          legend: { display: false },
           tooltip: { enabled: false, external: buildTooltip },
         },
         interaction: { mode: "index", intersect: false },
-        animation:   { duration: 600, easing: "easeOutQuart" },
+        animation: { duration: 600, easing: "easeOutQuart" },
       },
     };
     if (type !== "pie" && type !== "doughnut") {
       config.options.scales = {
         x: {
-          ticks:  { color: axisColor, font: { size: 11 } },
-          grid:   { color: gridColor, drawTicks: false },
+          ticks: { color: axisColor, font: { size: 11 } },
+          grid: { color: gridColor, drawTicks: false },
           border: { display: false },
         },
         y: {
@@ -389,8 +366,8 @@ document.addEventListener("DOMContentLoaded", function () {
               return isCurrency ? "KES " + (v >= 1000 ? (v / 1000).toFixed(0) + "k" : v) : v;
             },
           },
-          grid:        { color: gridColor },
-          border:      { display: false },
+          grid: { color: gridColor },
+          border: { display: false },
           beginAtZero: true,
         },
       };
@@ -408,16 +385,12 @@ document.addEventListener("DOMContentLoaded", function () {
       var ch = CHART_REGISTRY[targetId];
       if (!ch) return;
       legendEl.innerHTML = ch.data.datasets.map(function (ds, i) {
-        var color = Array.isArray(ds.borderColor)
-          ? ds.borderColor[0]
-          : ds.borderColor || ds.backgroundColor || PALETTE[i];
-        return '<span class="chart-legend-item" data-idx="' + i + '">' +
-               '<span class="chart-legend-dot" style="background:' + color + '"></span>' +
-               (ds.label || "") + '</span>';
+        var color = Array.isArray(ds.borderColor) ? ds.borderColor[0] : ds.borderColor || ds.backgroundColor || PALETTE[i];
+        return '<span class="chart-legend-item" data-idx="' + i + '">' + '<span class="chart-legend-dot" style="background:' + color + '"></span>' + (ds.label || "") + '</span>';
       }).join("");
       legendEl.querySelectorAll(".chart-legend-item").forEach(function (item) {
         item.addEventListener("click", function () {
-          var idx  = parseInt(item.dataset.idx, 10);
+          var idx = parseInt(item.dataset.idx, 10);
           var meta = ch.getDatasetMeta(idx);
           meta.hidden = !meta.hidden;
           item.classList.toggle("hidden", meta.hidden);
@@ -427,14 +400,13 @@ document.addEventListener("DOMContentLoaded", function () {
     }, 100);
   });
 
-
   var aiRoot = document.querySelector("[data-ai-chat]");
   if (aiRoot) {
-    var aiPanel   = aiRoot.querySelector("[data-ai-panel]");
-    var aiToggle  = aiRoot.querySelector("[data-ai-toggle]");
-    var aiThread  = aiRoot.querySelector("[data-ai-thread]");
-    var aiForm    = aiRoot.querySelector("[data-ai-form]");
-    var aiInput   = aiRoot.querySelector("[data-ai-input]");
+    var aiPanel = aiRoot.querySelector("[data-ai-panel]");
+    var aiToggle = aiRoot.querySelector("[data-ai-toggle]");
+    var aiThread = aiRoot.querySelector("[data-ai-thread]");
+    var aiForm = aiRoot.querySelector("[data-ai-form]");
+    var aiInput = aiRoot.querySelector("[data-ai-input]");
     var aiCounter = aiRoot.querySelector("[data-ai-counter]");
 
     function timeGreeting() {
@@ -498,10 +470,10 @@ document.addEventListener("DOMContentLoaded", function () {
       var w = document.createElement("div");
       w.className = isUser ? "ai-msg ai-msg-user" : "ai-msg";
       var b = document.createElement("div");
-      b.className   = "ai-bubble";
+      b.className = "ai-bubble";
       b.textContent = text;
       var m = document.createElement("div");
-      m.className   = "ai-meta";
+      m.className = "ai-meta";
       m.textContent = isUser ? "You · " + fmt() : "Echo AI · " + fmt();
       w.appendChild(b);
       w.appendChild(m);
@@ -574,6 +546,4 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     });
   }
-
-
 });
